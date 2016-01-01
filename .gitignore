@@ -1,0 +1,7 @@
+*.pyc
+*.py~
+
+conf/config_override.py
+
+.idea/
+
