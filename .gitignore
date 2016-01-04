@@ -6,3 +6,5 @@ conf/config_override.py
 .idea/
 
 *.log
+
+test/
