@@ -9,6 +9,8 @@
 from urllib import parse
 from urllib import request
 from conf.config import configs
+from http import cookiejar
+from core.state import *
 import logging
 
 logger = logging.getLogger(configs.app.log.name)
@@ -17,7 +19,7 @@ login_host = 'http://credit.stu.edu.cn/portal/stulogin.aspx'
 website_encoding = 'gbk'
 login_timeout = 3 #seconds
 
-def authenticate(username,passwd):
+def authenticate(username,passwd,login=False):
     """
     利用学分制验证用户
     :param username:
@@ -29,20 +31,32 @@ def authenticate(username,passwd):
         "txtUserPwd": passwd,
         "btnLogon": "登录",
         '__VIEWSTATE': '/wEPDwUKMTM1MzI1Njg5N2Rk47x7/EAaT/4MwkLGxreXh8mHHxA=',
-        '__EVENTVALIDATION': '/wEWBAKo25zdBALT8dy8BQLG8eCkDwKk07qFCRXt1F3RFYVdjuYasktKIhLnziqd' #aspx坑爹的地方
-
+        '__EVENTVALIDATION': '/wEWBAKo25zdBALT8dy8BQLG8eCkDwKk07qFCRXt1F3RFYVdjuYasktKIhLnziqd', #aspx坑爹的地方
     }).encode('utf-8')
 
-    try:
-        resp = request.urlopen(login_host,postdata,login_timeout)
-    except Exception as e:
-        logger.error('连接学分制失败')
-        return
-    content = resp.read()
-    if content.__contains__(b'alert'):
-        logger.info('验证失败')
-        return False
+    if login:
+        cookie_jar = cookiejar.CookieJar()
+        opener = request.build_opener(request.HTTPCookieProcessor(cookie_jar))
+        try:
+            resp = opener.open(login_host,postdata,login_timeout)
+        except Exception as e:
+            print(e)
+            return error(Error.CONNECT_ERROR)
+        content = resp.read()
+        if content.__contains__(b'alert'):
+            return failed('验证失败')
+        else:
+            return success('登陆成功',data={'opener':opener})
     else:
-        logger.info('验证成功')
-        return True
+        try:
+            resp = request.urlopen(login_host,postdata,login_timeout)
+        except Exception as e:
+            return error(Error.CONNECT_ERROR)
+        content = resp.read()
+        if content.__contains__(b'alert'):
+            return failed('验证失败')
+        else:
+            return success('验证成功')
+
+
 
