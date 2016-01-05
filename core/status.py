@@ -22,16 +22,17 @@ class Error(Enum):
 
 def success(msg='',data={}):
     if data:
-        return {
+        ret_val = {
             'status':Status.SUCCESS,
             'msg':msg,
             'data':data
         }
     else:
-        return {
+        ret_val = {
             'status':Status.SUCCESS,
             'msg':msg
         }
+    return toDict(ret_val)
 
 def failed(msg='',data={}):
     if data:
