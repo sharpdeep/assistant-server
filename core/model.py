@@ -12,6 +12,9 @@ from conf.config import configs
 connect(configs.db.name) #连接mongo
 
 class Lesson(Document):
+    """
+    备忘：lesson_id采用学年+学期+班号，如64417->20130164417？
+    """
     lesson_id = StringField(unique=True)
     name = StringField()
     credit = FloatField(default=0.0)
@@ -55,6 +58,20 @@ class Lesson(Document):
         for i in range(7):
             self.schedule[str(i)] = lesson[i+6]
         self.save()
+
+class Syllabus(EmbeddedDocument):
+    year = StringField()
+    semester = IntField()
+    lessons = ListField(ReferenceField(Lesson))
+
+class User(Document):
+    user_name = StringField(required=True,unique=True)
+    password  = StringField(required=True)
+    identity = StringField(choices=('student','teacher'),required=True)
+    user_id = StringField(unique=True) #学号是唯一的
+    grade = StringField() #哪一级
+    syllabus = MapField(EmbeddedDocumentField(Syllabus)) #key为学年+学期，value为读音课表
+
 
 
 
