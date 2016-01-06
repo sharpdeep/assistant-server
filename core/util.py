@@ -12,7 +12,7 @@ from datetime import datetime
 from urllib import request,parse
 from http import cookiejar
 from enum import Enum,unique
-import requests
+from bs4 import BeautifulSoup
 import logging
 
 logger = logging.getLogger(configs.app.log.name)
@@ -31,6 +31,13 @@ class Semester(Enum):
     SUMMER = 3
 
 def authenticate(username,passwd,login=False):
+    """
+    验证用户，当login为True,返回值中ret_val.data.opener为一个opener
+    :param username:
+    :param passwd:
+    :param login:
+    :return:
+    """
     postdata = parse.urlencode({
         "txtUserID": username,
         "txtUserPwd": passwd,
@@ -58,7 +65,15 @@ def authenticate(username,passwd,login=False):
             return success('登陆成功',data={'opener':opener})
 
 
-def get_syllabus(username,passwd,start_year=datetime.now().year,semester=Semester.AUTUMN):
+def get_syllabus(username,passwd,start_year=datetime.now().year,semester=Semester.AUTUMN.value):
+    """
+    获取课表页面
+    :param username:
+    :param passwd:
+    :param start_year:
+    :param semester:
+    :return:
+    """
     ret_val = authenticate(username,passwd,login=True)
     if not ret_val.status == Status.SUCCESS:
         return ret_val
@@ -83,8 +98,47 @@ def get_syllabus(username,passwd,start_year=datetime.now().year,semester=Semeste
     content = resp.read()
     return success(data={'content':content.decode('gbk').encode('utf-8')})
 
+class SyllabusParser(object):
+    def __init__(self,content):
+        self.content = content
 
-def gen_syllabus_post_data(start_year=datetime.now().year,semester=Semester.AUTUMN):
+    def getSyllabusTableStr(self):
+        start_index = self.content.find('<tr class="DGItemStyle')
+        end_index = self.content.find('<tr class="DGFooterStyle">')
+        return self.content[start_index:end_index]
+
+    def parse(self):
+        syllabusSoup = BeautifulSoup(self.getSyllabusTableStr(),'html.parser')
+        lessons = [[item.text.strip() for item in lesson.find_all('td')] for lesson in syllabusSoup.find_all('tr')]
+
+        return [Lesson(*lesson) for lesson in lessons]
+
+
+class Lesson(object):
+    def __init__(self,lesson_id='',name='',credit=0,teacher='',classroom='',duration='',*schedule):
+        self.id = lesson_id
+        self.name = name
+        self.credit = credit
+        self.teacher = teacher
+        self.classroom = classroom
+        self.duration = duration
+        self.schedule = schedule
+
+    def __str__(self):
+        lesson_info = '班号:\t'+self.id+'\t\n'+\
+                      '课程名称:\t'+self.name+'\t\n'+\
+                      '课程学分:\t'+self.credit+'\t\n'+\
+                      '教师:\t'+self.teacher+'\t\n'+\
+                      '课室:\t'+self.classroom+'\t\n'+\
+                      '起止周:\t'+self.duration+'\t\n'
+        schedule_info = ''
+        for item in self.schedule:
+            if not item == '':
+                schedule_info += '周'+str(self.schedule.index(item))+':\t'+item+'\t\n'
+        lesson_info += schedule_info
+        return lesson_info
+
+def gen_syllabus_post_data(start_year=datetime.now().year,semester=Semester.AUTUMN.value):
     data =('__EVENTTARGET=&__EVENTARGUMENT=' \
               '&__VIEWSTATE=%2FwEPDwUKLTc4MzA3NjE3Mg9kFgICAQ9kFgYCAQ9kFgRmDxAPFgIeBFRleHQFDzIwMTUtMjAxNuWtpuW5tGQQFQcPMjAxMi0yMDEz5a2m5bm0DzIwMTMtMjAxNOWtpuW5tA8yMDE0LTIwMTXlrablubQPMjAxNS0yMDE25a2m5bm0DzIwMTYtMjAxN%2BWtpuW5tA8yMDE3LTIwMTjlrablubQPMjAxOC0yMDE55a2m5bm0FQc' \
               'PMjAxMi0yMDEz5a2m5bm0DzIwMTMtMjAxNOWtpuW5tA8yMDE0LTIwMTXlrablubQPMjAxNS0yMDE25a2m' \
