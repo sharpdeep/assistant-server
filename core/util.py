@@ -13,6 +13,7 @@ from urllib import request,parse
 from http import cookiejar
 from enum import Enum,unique
 from bs4 import BeautifulSoup
+from core.model import Lesson
 import logging
 
 logger = logging.getLogger(configs.app.log.name)
@@ -65,7 +66,7 @@ def authenticate(username,passwd,login=False):
             return success('登陆成功',data={'opener':opener})
 
 
-def get_syllabus(username,passwd,start_year=datetime.now().year,semester=Semester.AUTUMN.value):
+def get_syllabus_page(username,passwd,start_year=datetime.now().year,semester=Semester.AUTUMN.value):
     """
     获取课表页面
     :param username:
@@ -99,44 +100,27 @@ def get_syllabus(username,passwd,start_year=datetime.now().year,semester=Semeste
     return success(data={'content':content.decode('gbk').encode('utf-8')})
 
 class SyllabusParser(object):
+    """
+    传入一个完整的课表页面字符串，输出课程。
+    usage：
+    parser = SyllabusParser(content)
+    lessons = parser.parse()
+    lessons是lesson对象的列表
+    """
     def __init__(self,content):
         self.content = content
 
-    def getSyllabusTableStr(self):
+    def __getSyllabusTableStr(self):
         start_index = self.content.find('<tr class="DGItemStyle')
         end_index = self.content.find('<tr class="DGFooterStyle">')
         return self.content[start_index:end_index]
 
     def parse(self):
-        syllabusSoup = BeautifulSoup(self.getSyllabusTableStr(),'html.parser')
+        syllabusSoup = BeautifulSoup(self.__getSyllabusTableStr(),'html.parser')
         lessons = [[item.text.strip() for item in lesson.find_all('td')] for lesson in syllabusSoup.find_all('tr')]
 
-        return [Lesson(*lesson) for lesson in lessons]
+        return lessons
 
-
-class Lesson(object):
-    def __init__(self,lesson_id='',name='',credit=0,teacher='',classroom='',duration='',*schedule):
-        self.id = lesson_id
-        self.name = name
-        self.credit = credit
-        self.teacher = teacher
-        self.classroom = classroom
-        self.duration = duration
-        self.schedule = schedule
-
-    def __str__(self):
-        lesson_info = '班号:\t'+self.id+'\t\n'+\
-                      '课程名称:\t'+self.name+'\t\n'+\
-                      '课程学分:\t'+self.credit+'\t\n'+\
-                      '教师:\t'+self.teacher+'\t\n'+\
-                      '课室:\t'+self.classroom+'\t\n'+\
-                      '起止周:\t'+self.duration+'\t\n'
-        schedule_info = ''
-        for item in self.schedule:
-            if not item == '':
-                schedule_info += '周'+str(self.schedule.index(item))+':\t'+item+'\t\n'
-        lesson_info += schedule_info
-        return lesson_info
 
 def gen_syllabus_post_data(start_year=datetime.now().year,semester=Semester.AUTUMN.value):
     data =('__EVENTTARGET=&__EVENTARGUMENT=' \
