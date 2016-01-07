@@ -14,6 +14,8 @@ from flask import Blueprint
 from flask.ext.restful import Resource,Api,reqparse
 from app import app
 import functools
+from core.model import *
+from core.status import *
 from core import util
 
 api = Api(app)
@@ -66,7 +68,7 @@ def add_args(parser,*arguments):
         return wrapper
     return decorator
 
-
+"""
 @api_route('/auth')
 class Auth(Resource):
     parser = reqparse.RequestParser()
@@ -84,6 +86,40 @@ class Auth(Resource):
             return {'data':'faild'}
         else:
             return{'data':'connect error'}
+"""
+
+@api_route('/auth')
+class Auth(Resource):
+    parser = reqparse.RequestParser()
+
+    @add_args(parser,('identify',str),('username',str),('password',str))
+    def post(self):
+        args = self.parser.parse_args()
+        identify = args['identify']
+        username = args['username']
+        password = args['password']
+        if identify == 'student': #如果是学生，首先判断是否在数据库中，是的话直接数据库auth否则通过学分制，同时缓存
+            student = Student.objects(account=username)
+            if not student:#不在数据库中
+                ret_val = util.authenticate(username,password)
+                if not ret_val.status == Status.SUCCESS.value:
+                    return error(Error.CONNECT_ERROR.value)
+
+                ret_val = util.get_student_info_page(username,password)
+                info_page = ret_val.data.content
+                parser = util.StudentInfoParser(info_page,username,password)
+                info = parser.parse()
+
+                student = Student() #存到数据库中
+                student.save_from_dict(info)
+                """
+                todo:1.生成token，存到数据库中；2.如果用户在数据库中，更新token
+                """
+            return success('auth!')
+        elif identify == 'teacher':
+            return success('teacher!')
+        else:
+            return error(Error.ARGUMENT_ERROR.value)
 
 
 

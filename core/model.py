@@ -8,6 +8,7 @@
 """
 from mongoengine import *
 from conf.config import configs
+from datetime import datetime
 
 connect(configs.db.name) #连接mongo
 
@@ -64,14 +65,58 @@ class Syllabus(EmbeddedDocument):
     semester = IntField()
     lessons = ListField(ReferenceField(Lesson))
 
-class User(Document):
-    user_name = StringField(required=True,unique=True)
+class Teacher(Document):
+    account = StringField(required=True,unique=True)
+    password = StringField(required=True)
+    name = StringField()
+    syllabus = MapField(EmbeddedDocumentField(Syllabus))
+
+class Student(Document):
+    account = StringField(required=True,unique=True)
     password  = StringField(required=True)
-    identity = StringField(choices=('student','teacher'),required=True)
-    user_id = StringField(unique=True) #学号是唯一的
-    grade = StringField() #哪一级
+
+    name = StringField()
+    vid = StringField()
+    address = StringField()
+    student_id = StringField(unique=True) #学号是唯一的
+    gender = StringField()
+    birthday = DateTimeField()
+    identify_id = StringField(unique=True)
+    nation = StringField()
+    college = StringField()
+    major = StringField()
+    grade = StringField()
+    enrolmentdate = DateTimeField()
+    tutor = StringField() #备忘：teacher model完成后做一个引用字段
+    status = StringField() #学籍状态
+    nativeplace = StringField() #籍贯
+    familyphone = StringField() #家庭电话
+    postalcode = StringField() #邮编
+
+    token = StringField()
     syllabus = MapField(EmbeddedDocumentField(Syllabus)) #key为学年+学期，value为读音课表
 
+    def save_from_dict(self,info):
+        self.account = info['account']
+        self.password = info['password']
+        self.name = info['name']
+        self.vid = info['vid']
+        self.address = info['address']
+        self.student_id = info['student_id']
+        self.gender = info['gender']
+        self.birthday = datetime.strptime(info['birthday'],'%Y%m%d')
+        self.identify_id = info['identify_id']
+        self.nation = info['nation']
+        self.college = info['college']
+        self.major = info['major']
+        self.grade = info['grade']
+        self.enrolmentdate = datetime.strptime(info['enrolmentdate'],'%Y%m%d')
+        self.tutor = info['tutor']
+        self.status = info['status']
+        self.nativeplace = info['nativeplace']
+        self.familyphone = info['familyphone']
+        self.postalcode = info['postalcode']
 
+        self.save()
 
 

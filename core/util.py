@@ -101,7 +101,8 @@ def get_syllabus_page(username,passwd,start_year=datetime.now().year,semester=Se
 
 def get_student_info_page(username,passswd):
     ret_val = authenticate(username,passswd,login=True)
-    if not ret_val.status == Status.SUCCESS:
+    if not ret_val.status == Status.SUCCESS.value:
+        print('I am here')
         return ret_val
     opener = ret_val.data.opener
     try:
@@ -135,8 +136,10 @@ class SyllabusParser(object):
         return lessons
 
 class StudentInfoParser(object):
-    def __init__(self,content):
+    def __init__(self,content,username,password):
         self.content = content
+        self.username = username
+        self.password = password
 
     def parse(self):
         def text(span_id):
@@ -147,7 +150,7 @@ class StudentInfoParser(object):
         info['name'] = text('Label1')
         info['vid'] = text('Label3')
         info['address'] = text('Label4')
-        info['studen_id'] = text('Label5')
+        info['student_id'] = text('Label5')
         info['gender'] = text('Label7')
         info['birthday'] = text('Label8')
         info['identify_id'] = text('Label9')
@@ -162,6 +165,8 @@ class StudentInfoParser(object):
         info['familyphone'] = text('Label18')
         info['postalcode'] = text('Label19')
 
+        info['account'] = self.username
+        info['password'] = self.password
         return info
 
 

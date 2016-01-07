@@ -19,17 +19,18 @@ class Status(Enum):
 @unique
 class Error(Enum):
     CONNECT_ERROR = 'connect error'
+    ARGUMENT_ERROR = 'argument error'
 
 def success(msg='',data={}):
     if data:
         ret_val = {
-            'status':Status.SUCCESS,
+            'status':Status.SUCCESS.value,
             'msg':msg,
             'data':data
         }
     else:
         ret_val = {
-            'status':Status.SUCCESS,
+            'status':Status.SUCCESS.value,
             'msg':msg
         }
     return toDict(ret_val)
@@ -37,13 +38,13 @@ def success(msg='',data={}):
 def failed(msg='',data={}):
     if data:
         ret_val =  {
-            'status':Status.FAILED,
+            'status':Status.FAILED.value,
             'msg':msg,
             'data':data
         }
     else:
         ret_val =  {
-            'status':Status.FAILED,
+            'status':Status.FAILED.value,
             'msg':msg
         }
 
@@ -52,13 +53,13 @@ def failed(msg='',data={}):
 def error(msg = '',data={}):
     if data:
         ret_val =  {
-            'status':Status.ERROR,
+            'status':Status.ERROR.value,
             'msg':msg,
             'data':data
         }
     else:
         ret_val =  {
-            'status':Status.ERROR,
+            'status':Status.ERROR.value,
             'msg':msg
         }
     return toDict(ret_val)
