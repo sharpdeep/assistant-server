@@ -24,6 +24,7 @@ default_timeout = 3 #seconds
 login_host = 'http://credit.stu.edu.cn/portal/stulogin.aspx'
 schedule_host = 'http://credit.stu.edu.cn/Elective/MyCurriculumSchedule.aspx'
 curriculum_base_url = b'http://credit.stu.edu.cn/Student/StudentTimeTable.aspx?'
+student_info_url = 'http://credit.stu.edu.cn/Student/DisplayStudentInfo.aspx'
 
 @unique
 class Semester(Enum):
@@ -94,10 +95,22 @@ def get_syllabus_page(username,passwd,start_year=datetime.now().year,semester=Se
         data = gen_syllabus_post_data(start_year,semester)
         resp = opener.open(curriculum_url,data=data,timeout=default_timeout)
     except Exception as e:
-        print(e)
         return error(Error.CONNECT_ERROR)
     content = resp.read()
-    return success(data={'content':content.decode('gbk').encode('utf-8')})
+    return success(data={'content':content.decode('gbk')})
+
+def get_student_info_page(username,passswd):
+    ret_val = authenticate(username,passswd,login=True)
+    if not ret_val.status == Status.SUCCESS:
+        return ret_val
+    opener = ret_val.data.opener
+    try:
+        resp = opener.open(student_info_url)
+    except Exception as e:
+        return error(Error.CONNECT_ERROR)
+
+    content = resp.read().decode(website_encoding)
+    return success(data={'content':content})
 
 class SyllabusParser(object):
     """
@@ -120,6 +133,36 @@ class SyllabusParser(object):
         lessons = [[item.text.strip() for item in lesson.find_all('td')] for lesson in syllabusSoup.find_all('tr')]
 
         return lessons
+
+class StudentInfoParser(object):
+    def __init__(self,content):
+        self.content = content
+
+    def parse(self):
+        def text(span_id):
+            return soup.find('span',id=span_id).text.strip()
+        info = dict()
+
+        soup = BeautifulSoup(self.content,'html.parser')
+        info['name'] = text('Label1')
+        info['vid'] = text('Label3')
+        info['address'] = text('Label4')
+        info['studen_id'] = text('Label5')
+        info['gender'] = text('Label7')
+        info['birthday'] = text('Label8')
+        info['identify_id'] = text('Label9')
+        info['nation'] = text('Label10')
+        info['college'] = text('Label11')
+        info['major'] = text('Label12')
+        info['grade'] = text('Label13')
+        info['enrolmentdate'] = text('Label14') #入学时间
+        info['tutor'] = text('Label15')
+        info['status'] = text('Label16') #学期状态
+        info['nativeplace'] = text('Label17') #籍贯
+        info['familyphone'] = text('Label18')
+        info['postalcode'] = text('Label19')
+
+        return info
 
 
 def gen_syllabus_post_data(start_year=datetime.now().year,semester=Semester.AUTUMN.value):
