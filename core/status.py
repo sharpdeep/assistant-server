@@ -21,45 +21,26 @@ class Error(Enum):
     CONNECT_ERROR = 'connect error'
     ARGUMENT_ERROR = 'argument error'
 
-def success(msg='',data={}):
-    if data:
-        ret_val = {
-            'status':Status.SUCCESS.value,
-            'msg':msg,
-            'data':data
-        }
-    else:
-        ret_val = {
-            'status':Status.SUCCESS.value,
-            'msg':msg
-        }
+def success(msg='',**data):
+    ret_val = {
+        'status':Status.SUCCESS.value,
+        'msg':msg,
+    }
+    ret_val.update(data)
     return toDict(ret_val)
 
-def failed(msg='',data={}):
-    if data:
-        ret_val =  {
-            'status':Status.FAILED.value,
-            'msg':msg,
-            'data':data
-        }
-    else:
-        ret_val =  {
-            'status':Status.FAILED.value,
-            'msg':msg
-        }
-
+def failed(msg='',**data):
+    ret_val = {
+        'status':Status.FAILED.value,
+        'msg':msg,
+    }
+    ret_val.update(data)
     return toDict(ret_val)
 
-def error(msg = '',data={}):
-    if data:
-        ret_val =  {
-            'status':Status.ERROR.value,
-            'msg':msg,
-            'data':data
-        }
-    else:
-        ret_val =  {
-            'status':Status.ERROR.value,
-            'msg':msg
-        }
+def error(msg = '',**data):
+    ret_val = {
+        'status':Status.ERROR.value,
+        'msg':msg,
+    }
+    ret_val.update(data)
     return toDict(ret_val)

@@ -52,7 +52,7 @@ def authenticate(username,passwd,login=False):
         try:
             resp = request.urlopen(login_host,postdata,timeout=default_timeout)
         except Exception as e:
-            return error(Error.CONNECT_ERROR)
+            return error(Error.CONNECT_ERROR.value)
         if resp.read().__contains__(b'alert'):
             return failed('验证失败')
         else:
@@ -60,11 +60,14 @@ def authenticate(username,passwd,login=False):
     else:
         cookie_jar = cookiejar.CookieJar()
         opener = request.build_opener(request.HTTPCookieProcessor(cookie_jar))
-        resp = opener.open(login_host,postdata,default_timeout)
+        try:
+            resp = opener.open(login_host,postdata,default_timeout)
+        except Exception as e:
+            return error(Error.CONNECT_ERROR.value)
         if resp.read().__contains__(b'alert'):
             return failed('验证失败')
         else:
-            return success('登陆成功',data={'opener':opener})
+            return success('登陆成功',opener=opener)
 
 
 def get_syllabus_page(username,passwd,start_year=datetime.now().year,semester=Semester.AUTUMN.value):
@@ -77,10 +80,10 @@ def get_syllabus_page(username,passwd,start_year=datetime.now().year,semester=Se
     :return:
     """
     ret_val = authenticate(username,passwd,login=True)
-    if not ret_val.status == Status.SUCCESS:
+    if not ret_val.status == Status.SUCCESS.value:
         return ret_val
     try:
-        opener = ret_val.data.opener
+        opener = ret_val.opener
         #得到学号和lock参数
         resp = opener.open(schedule_host, timeout=default_timeout)
         content = resp.read()
@@ -95,23 +98,22 @@ def get_syllabus_page(username,passwd,start_year=datetime.now().year,semester=Se
         data = gen_syllabus_post_data(start_year,semester)
         resp = opener.open(curriculum_url,data=data,timeout=default_timeout)
     except Exception as e:
-        return error(Error.CONNECT_ERROR)
-    content = resp.read()
-    return success(data={'content':content.decode('gbk')})
+        return error(Error.CONNECT_ERROR.value)
+    content = resp.read().decode(website_encoding)
+    return success(content=content)
 
 def get_student_info_page(username,passswd):
     ret_val = authenticate(username,passswd,login=True)
     if not ret_val.status == Status.SUCCESS.value:
-        print('I am here')
         return ret_val
-    opener = ret_val.data.opener
+    opener = ret_val.opener
     try:
         resp = opener.open(student_info_url)
     except Exception as e:
         return error(Error.CONNECT_ERROR)
 
     content = resp.read().decode(website_encoding)
-    return success(data={'content':content})
+    return success(content=content,username=username,password=passswd)
 
 class SyllabusParser(object):
     """
@@ -133,13 +135,11 @@ class SyllabusParser(object):
         syllabusSoup = BeautifulSoup(self.__getSyllabusTableStr(),'html.parser')
         lessons = [[item.text.strip() for item in lesson.find_all('td')] for lesson in syllabusSoup.find_all('tr')]
 
-        return lessons
+        return success(lessons=lessons)
 
 class StudentInfoParser(object):
-    def __init__(self,content,username,password):
+    def __init__(self,content):
         self.content = content
-        self.username = username
-        self.password = password
 
     def parse(self):
         def text(span_id):
@@ -165,9 +165,7 @@ class StudentInfoParser(object):
         info['familyphone'] = text('Label18')
         info['postalcode'] = text('Label19')
 
-        info['account'] = self.username
-        info['password'] = self.password
-        return info
+        return success(info=info)
 
 
 def gen_syllabus_post_data(start_year=datetime.now().year,semester=Semester.AUTUMN.value):
