@@ -14,9 +14,15 @@ from flask import Blueprint
 from flask.ext.restful import Resource,Api,reqparse
 from app import app
 import functools
+from enum import Enum,unique
 from core.model import *
 from core.status import *
 from core import util
+
+@unique
+class Identify(Enum):
+    STUDENT = 'student'
+    TEACHER = 'teacher'
 
 api = Api(app)
 api_prefix = '/api'
@@ -68,58 +74,49 @@ def add_args(parser,*arguments):
         return wrapper
     return decorator
 
-"""
 @api_route('/auth')
 class Auth(Resource):
     parser = reqparse.RequestParser()
 
-    @add_args(parser,('username',str),('password',str))
+    @add_args(parser,('username',str),('password',str)) #只提供账号和密码，账号类型由服务器判别(todo)
     def post(self):
         args = self.parser.parse_args()
-        username = args['username']
-        passwd = args['password']
-
-        auth_result = util.authenticate(username,passwd)
-        if auth_result:
-            return {'data':'success'}
-        elif isinstance(auth_result,bool):
-            return {'data':'faild'}
-        else:
-            return{'data':'connect error'}
-"""
-
-@api_route('/auth')
-class Auth(Resource):
-    parser = reqparse.RequestParser()
-
-    @add_args(parser,('identify',str),('username',str),('password',str))
-    def post(self):
-        args = self.parser.parse_args()
-        identify = args['identify']
         username = args['username']
         password = args['password']
-        if identify == 'student': #如果是学生，首先判断是否在数据库中，是的话直接数据库auth否则通过学分制，同时缓存
-            student = Student.objects(account=username)
-            if not student:#不在数据库中
-                ret_val = util.authenticate(username,password)
-                if not ret_val.status == Status.SUCCESS.value:
-                    return error(Error.CONNECT_ERROR.value)
+        token = util.gen_token(username)
 
+        teacher = Teacher.objects(account=username,password=password).first()
+        if teacher: #判断为教师账号
+            teacher.token = token #更新token
+            teacher.save()
+            return auth_result(success,'auth teacher from database',token,Identify.TEACHER.value)
+
+        #不在教师数据库中，那么就可能是学生账号或非法账号
+        student = Student.objects(account=username,password=password).first()
+        if student: #学生类型,并在数据库中
+            student.token = token #更新token
+            student.save()
+            return auth_result(success,'auth student from database',token,Identify.STUDENT.value)
+        else: #数据库中找不到，需要用到学分制查询
+            ret_val = util.authenticate(username,password)
+            if ret_val.status == Status.SUCCESS.value: #验证成功，缓存info到数据库
                 ret_val = util.get_student_info_page(username,password)
-                info_page = ret_val.data.content
-                parser = util.StudentInfoParser(info_page,username,password)
-                info = parser.parse()
+                if ret_val.status == Status.SUCCESS.value:
+                    parser = util.StudentInfoParser(ret_val.content)
+                    ret_val = parser.parse()
+                    student = Student(account=username,password=password,token=token)
+                    student.save_from_dict(ret_val.info) #顺便存储学生信息
+                    return auth_result(success,'auth from credit',token,Identify.STUDENT.value)
+                else:
+                    return auth_result(failed,'failed to get student info')
+            else:
+                    return auth_result(failed,'failed to login credit')
 
-                student = Student() #存到数据库中
-                student.save_from_dict(info)
-                """
-                todo:1.生成token，存到数据库中；2.如果用户在数据库中，更新token
-                """
-            return success('auth!')
-        elif identify == 'teacher':
-            return success('teacher!')
-        else:
-            return error(Error.ARGUMENT_ERROR.value)
+def auth_result(status_func,msg='',token='',identify=''):
+    return status_func(msg,data={'token':token,'identify':identify})
+
+
+
 
 
 

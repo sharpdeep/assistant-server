@@ -13,6 +13,8 @@ from urllib import request,parse
 from http import cookiejar
 from enum import Enum,unique
 from bs4 import BeautifulSoup
+from uuid import uuid4
+import base64
 from core.model import Lesson
 import logging
 
@@ -184,3 +186,10 @@ def gen_syllabus_post_data(start_year=datetime.now().year,semester=Semester.AUTU
               'D1%A7%C4%EA&ucsYS%24XQ=' + str(semester) + '&ucsYS%24hfXN=&btnSearch.x=42&btnSearch.y=21').format(start_year, start_year+1)
 
     return data.encode('utf-8')
+
+def gen_token(username):
+    return base64.b64encode((username+'-'+uuid4().hex).encode('utf-8')).decode('utf-8')
+
+def parser_token(token):
+    result =  base64.b64decode(token.encode('utf-8')).decode('utf-8')
+    return result.split('-')[0]

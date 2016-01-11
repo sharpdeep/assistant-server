@@ -66,8 +66,12 @@ class Syllabus(EmbeddedDocument):
     lessons = ListField(ReferenceField(Lesson))
 
 class Teacher(Document):
+    """
+    教师账号采用后台注册方式
+    """
     account = StringField(required=True,unique=True)
     password = StringField(required=True)
+    token = StringField()
     name = StringField()
     syllabus = MapField(EmbeddedDocumentField(Syllabus))
 
@@ -97,8 +101,6 @@ class Student(Document):
     syllabus = MapField(EmbeddedDocumentField(Syllabus)) #key为学年+学期，value为读音课表
 
     def save_from_dict(self,info):
-        self.account = info['account']
-        self.password = info['password']
         self.name = info['name']
         self.vid = info['vid']
         self.address = info['address']
