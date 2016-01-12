@@ -17,6 +17,7 @@ from uuid import uuid4
 import base64
 from core.model import Lesson
 import logging
+import jwt
 
 logger = logging.getLogger(configs.app.log.name)
 
@@ -72,7 +73,7 @@ def authenticate(username,passwd,login=False):
             return success('登陆成功',opener=opener)
 
 
-def get_syllabus_page(username,passwd,start_year=datetime.now().year,semester=Semester.AUTUMN.value):
+def get_syllabus_page(username,passwd,start_year=str(datetime.now().year),semester=Semester.AUTUMN.value):
     """
     获取课表页面
     :param username:
@@ -100,6 +101,7 @@ def get_syllabus_page(username,passwd,start_year=datetime.now().year,semester=Se
         data = gen_syllabus_post_data(start_year,semester)
         resp = opener.open(curriculum_url,data=data,timeout=default_timeout)
     except Exception as e:
+        print(e)
         return error(Error.CONNECT_ERROR.value)
     content = resp.read().decode(website_encoding)
     return success(content=content)
@@ -170,7 +172,7 @@ class StudentInfoParser(object):
         return success(info=info)
 
 
-def gen_syllabus_post_data(start_year=datetime.now().year,semester=Semester.AUTUMN.value):
+def gen_syllabus_post_data(start_year=str(datetime.now().year),semester=Semester.AUTUMN.value):
     data =('__EVENTTARGET=&__EVENTARGUMENT=' \
               '&__VIEWSTATE=%2FwEPDwUKLTc4MzA3NjE3Mg9kFgICAQ9kFgYCAQ9kFgRmDxAPFgIeBFRleHQFDzIwMTUtMjAxNuWtpuW5tGQQFQcPMjAxMi0yMDEz5a2m5bm0DzIwMTMtMjAxNOWtpuW5tA8yMDE0LTIwMTXlrablubQPMjAxNS0yMDE25a2m5bm0DzIwMTYtMjAxN%2BWtpuW5tA8yMDE3LTIwMTjlrablubQPMjAxOC0yMDE55a2m5bm0FQc' \
               'PMjAxMi0yMDEz5a2m5bm0DzIwMTMtMjAxNOWtpuW5tA8yMDE0LTIwMTXlrablubQPMjAxNS0yMDE25a2m' \
@@ -183,13 +185,16 @@ def gen_syllabus_post_data(start_year=datetime.now().year,semester=Semester.AUTU
               '&__VIEWSTATEGENERATOR=E672B8C6&__EVENTVALIDATION=%2FwEWDgKP7Z%2FyDQKA2K7WDwKl3bLICQKs3faYCwKj3ZrWCALF5PiNDALE5IzLDQLD5MCbDwKv3YqZDQL7tY9IAvi1j0gC' \
               '%2BrWPSAL63YQMAqWf8%2B4KZKbR9XsGkypHcOunFkHTcdqR6to%3D&' \
               'ucsYS%24XN%24Text={}-{}%' \
-              'D1%A7%C4%EA&ucsYS%24XQ=' + str(semester) + '&ucsYS%24hfXN=&btnSearch.x=42&btnSearch.y=21').format(start_year, start_year+1)
+              'D1%A7%C4%EA&ucsYS%24XQ=' + str(semester) + '&ucsYS%24hfXN=&btnSearch.x=42&btnSearch.y=21').format(str(start_year), str(int(start_year)+1))
 
     return data.encode('utf-8')
 
-def gen_token(username):
-    return base64.b64encode((username+'-'+uuid4().hex).encode('utf-8')).decode('utf-8')
+def gen_token(username,identify):
+    return jwt.encode({'username':username,'identify':identify,'timestamp':int(datetime.now().timestamp())},configs.app.jwt_secret).decode('utf-8')
 
 def parser_token(token):
-    result =  base64.b64decode(token.encode('utf-8')).decode('utf-8')
-    return result.split('-')[0]
+    try:
+        payload = jwt.decode(token,configs.app.jwt_secret)
+    except Exception as e:
+        return None
+    return toDict(payload)

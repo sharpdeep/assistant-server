@@ -14,7 +14,7 @@ connect(configs.db.name) #连接mongo
 
 class Lesson(Document):
     """
-    备忘：lesson_id采用学年+学期+班号，如64417->20130164417？
+    lesson_id采用学年+学期+班号，如64417->20130164417
     """
     lesson_id = StringField(unique=True)
     name = StringField()
@@ -41,14 +41,17 @@ class Lesson(Document):
         lesson_info += schedule_info
         return lesson_info
 
-    def save_from_rawdata(self,lesson):
+    def save_from_rawdata(self,lesson,years,semester):
         """
         raw data是指包含一个lesson一个列表，
         如：['64417', '[EEG2009A]信号与系统', '4.0', '李旭涛/闫敬文', 'E阶梯教室204', '1 -14',
          '', '34', '', '34', '', '', '']
         :return:
         """
-        self.lesson_id = lesson[0]
+        Lid = str(years)+'0'+str(semester)+lesson[0]
+        if Lesson.objects(lesson_id=Lid).first(): #保证Lesson的单例性
+            return
+        self.lesson_id = Lid
         self.name = lesson[1]
         self.credit = float(lesson[2])
         self.teacher = lesson[3]
@@ -60,10 +63,14 @@ class Lesson(Document):
             self.schedule[str(i)] = lesson[i+6]
         self.save()
 
+    def exist(self,leeson_id,start_year,semester):
+        return Lesson.objects(str(start_year)+'0'+str(semester)+leeson_id).first()
+
 class Syllabus(EmbeddedDocument):
     year = StringField()
     semester = IntField()
     lessons = ListField(ReferenceField(Lesson))
+
 
 class Teacher(Document):
     """

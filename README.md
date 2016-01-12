@@ -2,6 +2,8 @@
 
 server for assistant.
 
+[接口文档](http://doc.star7th.com/index.php/504)
+
 项目结构：
 ```
 .

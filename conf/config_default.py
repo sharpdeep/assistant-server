@@ -9,6 +9,7 @@
 
 import logging
 import os
+from uuid import uuid4
 
 
 
@@ -23,7 +24,9 @@ configs = {
             'logFile':os.path.abspath('./log/main.log'),
             'maxBytes':5*1024*1024,
             'backupCount':50,
-        }
+        },
+        'jwt_secret':'',
+        'exprire':7*24*3600,#一个星期
     },
 
     'db':{
