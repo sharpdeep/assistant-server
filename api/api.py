@@ -74,7 +74,7 @@ def add_args(parser,*arguments):
         return wrapper
     return decorator
 
-def request_login(func):
+def token_check(func):
     @functools.wraps(func)
     def wrapper(*args,**kwargs):
         token = request.headers['Authorization']
@@ -133,7 +133,7 @@ def auth_result(status_func,msg='',token='',identify=''):
 
 @api_route('/syllabus/<string:start_year>/<int:semester>')
 class SyllabusResource(Resource):
-    @request_login
+    @token_check
     def get(self,start_year,semester):
         """
         获取课表
@@ -165,22 +165,24 @@ class SyllabusResource(Resource):
             return syllabus_result(success,'teacher should add lesson self')
 
 def syllabus_result(status_func,msg='',syllabus=list()):
-    def lesson2str(lesson):
-        return {
+    def lesson2dict(lesson):
+        return  {
             'id':lesson.lesson_id,
             'name':lesson.name,
             'teacher':lesson.teacher,
             'credit':lesson.credit,
             'classroom':lesson.classroom,
             'start_week':lesson.start_week,
-            'end_week':lesson.end_week
+            'end_week':lesson.end_week,
+            'schedule':lesson.schedule
         }
+
     if len(syllabus) > 0:
         classes = list()
         for lesson in syllabus:
-            classes.append(lesson2str(lesson))
-        return status_func(msg,syllabus=classes)
-    return status_func(msg,syllabus=syllabus)
+            classes.append(lesson2dict(lesson))
+        return status_func(msg,syllabuses=classes)
+    return status_func(msg,syllabuses=syllabus)
 
 
 
