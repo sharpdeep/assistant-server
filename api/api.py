@@ -78,8 +78,9 @@ def token_check(func):
     @functools.wraps(func)
     def wrapper(*args,**kwargs):
         token = request.headers['Authorization']
-        print(token)
+        # print(token)
         payload = util.parser_token(token)
+        print('['+payload.identify+']'+payload.username+' auth in '+str(datetime.fromtimestamp(payload.timestamp)))
         nowtime = int(datetime.now().timestamp())
         if not payload:
             return syllabus_result(failed,'illegal token')
@@ -158,7 +159,7 @@ class SyllabusResource(Resource):
                 student.save()
                 return syllabus_result(success,'got syllabus from credit',syllabus=lessons)
             else:
-                syllabus = student.syllabus.get('201301').lessons
+                syllabus = student.syllabus.get(start_year+'0'+str(semester)).lessons
                 return syllabus_result(success,'got syllabus from database',syllabus=syllabus)
 
         #判断为教师类型(todo)
@@ -182,7 +183,16 @@ def syllabus_result(status_func,msg='',syllabus=list()):
         for lesson in syllabus:
             classes.append(lesson2dict(lesson))
         return status_func(msg,syllabuses=classes)
-    return status_func(msg,syllabuses=syllabus)
+    return failed(msg,syllabuses=syllabus)
+
+@api_route('/classinfo/studentlist/<string:classid>')
+class StudentListResource(Resource):
+    @token_check
+    def get(self,classid):
+        ret_val = util.get_student_list_by_classId(classid)
+        if not ret_val.status == Status.SUCCESS.value:
+            return failed(ret_val.msg)
+        return success(students=ret_val.studentList)
 
 
 

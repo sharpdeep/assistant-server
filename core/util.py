@@ -28,6 +28,7 @@ login_host = 'http://credit.stu.edu.cn/portal/stulogin.aspx'
 schedule_host = 'http://credit.stu.edu.cn/Elective/MyCurriculumSchedule.aspx'
 curriculum_base_url = b'http://credit.stu.edu.cn/Student/StudentTimeTable.aspx?'
 student_info_url = 'http://credit.stu.edu.cn/Student/DisplayStudentInfo.aspx'
+class_detail_msg_base_url = 'http://credit.stu.edu.cn/Info/DisplayKkb.aspx?'
 
 @unique
 class Semester(Enum):
@@ -189,6 +190,21 @@ def gen_syllabus_post_data(start_year=str(datetime.now().year),semester=Semester
 
     return data.encode('utf-8')
 
+def get_student_list_by_classId(classId):
+    class_detail_msg_url = class_detail_msg_base_url + 'ClassID='+classId
+    try:
+        resp = request.urlopen(class_detail_msg_url,timeout=default_timeout)
+    except Exception as e:
+        return error(Error.CONNECT_ERROR.value)
+    content = resp.read().decode(website_encoding)
+    #parse content
+    studentListSoup = BeautifulSoup(content,'html.parser')
+    studentList = [[column.text.strip() for column in row.find_all('td')] for row in studentListSoup.find_all('table',id='ctl00_cpContent_gvStudent')[0].find_all('tr')]
+    studentList = [{'id':student[0],'name':student[1],'gender':student[2],'major':student[3],'priority':student[4],'time':student[5]} for student in studentList[1:]]
+    return success(studentList=studentList)
+
+
+
 def gen_token(username,identify):
     return jwt.encode({'username':username,'identify':identify,'timestamp':int(datetime.now().timestamp())},configs.app.jwt_secret).decode('utf-8')
 
@@ -198,3 +214,7 @@ def parser_token(token):
     except Exception as e:
         return None
     return toDict(payload)
+
+# if __name__ == '__main__':
+#     studentList = get_student_list_by_classId('59254')
+#     print(studentList)
