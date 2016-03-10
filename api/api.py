@@ -107,27 +107,21 @@ class AuthResource(Resource):
             teacher.save()
             return auth_result(success,'auth teacher from database',token,Identify.TEACHER.value)
 
-        #不在教师数据库中，那么就可能是学生账号或非法账号
+        # #不在教师数据库中，那么就可能是学生账号或非法账号
         token = util.gen_token(username,Identify.STUDENT.value)
-        student = Student.objects(account=username,password=password).first()
-        if student: #学生类型,并在数据库中
-            student.token = token #更新token
-            student.save()
-            return auth_result(success,'auth student from database',token,Identify.STUDENT.value)
-        else: #数据库中找不到，需要用到学分制查询
-            ret_val = util.authenticate(username,password)
-            if ret_val.status == Status.SUCCESS.value: #验证成功，缓存info到数据库
-                ret_val = util.get_student_info_page(username,password)
-                if ret_val.status == Status.SUCCESS.value:
-                    parser = util.StudentInfoParser(ret_val.content)
-                    ret_val = parser.parse()
-                    student = Student(account=username,password=password,token=token)
-                    student.save_from_dict(ret_val.info) #顺便存储学生信息
-                    return auth_result(success,'auth from credit',token,Identify.STUDENT.value)
-                else:
-                    return auth_result(failed,'failed to get student info')
+        ret_val = util.authenticate(username,password)
+        if ret_val.status == Status.SUCCESS.value: #验证成功，缓存info到数据库
+            ret_val = util.get_student_info_page(username,password)
+            if ret_val.status == Status.SUCCESS.value:
+                parser = util.StudentInfoParser(ret_val.content)
+                ret_val = parser.parse()
+                student = Student.update_or_create(account=username,password=password,token=token)
+                student.save_from_dict(ret_val.info) #顺便存储学生信息
+                return auth_result(success,'auth from credit',token,Identify.STUDENT.value)
             else:
-                    return auth_result(failed,'failed to login credit')
+                return auth_result(failed,'failed to get student info')
+        else:
+                return auth_result(failed,'failed to login credit')
 
 def auth_result(status_func,msg='',token='',identify=''):
     return status_func(msg,data={'token':token,'identify':identify})
@@ -151,7 +145,7 @@ class SyllabusResource(Resource):
                 raw_lessons = parser.parse().lessons
                 lessons = list()
                 for data in raw_lessons:  #将课程保存到数据库中，同时保持单例性
-                    lesson_id = str(start_year)+'0'+str(semester)+data[0]
+                    lesson_id = data[0]
                     Lesson().save_from_rawdata(data,start_year,semester)
                     lessons.append(Lesson.objects(lesson_id=lesson_id).first())
                 syllabus = Syllabus(year=start_year,semester=semester,lessons=lessons)
@@ -189,10 +183,16 @@ def syllabus_result(status_func,msg='',syllabus=list()):
 class StudentListResource(Resource):
     @token_check
     def get(self,classid):
-        ret_val = util.get_student_list_by_classId(classid)
-        if not ret_val.status == Status.SUCCESS.value:
-            return failed(ret_val.msg)
-        return success(students=ret_val.studentList)
+        lesson = Lesson.objects(lesson_id=classid).first()
+        if len(lesson['studentList']) == 0:
+            ret_val = util.get_student_list_by_classId(classid)
+            if not ret_val.status == Status.SUCCESS.value:
+                return failed(ret_val.msg)
+            lesson['studentList'] = ret_val.studentList
+            lesson.save()
+            return success(students=ret_val.studentList)
+        else:
+            return success(students=lesson['studentList'])
 
 
 

@@ -24,7 +24,7 @@ class Lesson(Document):
     start_week = IntField(default=1)
     end_week = IntField(default=16)
     schedule = DictField()
-
+    studentList = ListField()
 
     def __str__(self):
         lesson_info = '班号:\t'+self.lesson_id+'\t\n'+\
@@ -48,7 +48,7 @@ class Lesson(Document):
          '', '34', '', '34', '', '', '']
         :return:
         """
-        Lid = str(years)+'0'+str(semester)+lesson[0]
+        Lid = lesson[0]
         if Lesson.objects(lesson_id=Lid).first(): #保证Lesson的单例性
             return
         self.lesson_id = Lid
@@ -64,7 +64,7 @@ class Lesson(Document):
         self.save()
 
     def exist(self,leeson_id,start_year,semester):
-        return Lesson.objects(str(start_year)+'0'+str(semester)+leeson_id).first()
+        return Lesson.objects(leeson_id).first()
 
 class Syllabus(EmbeddedDocument):
     year = StringField()
@@ -128,4 +128,14 @@ class Student(Document):
 
         self.save()
 
-
+    def update_or_create(account,password,token):
+        s = Student.objects(account = account).first()
+        if s:
+            #update
+            s.password = password
+            s.token = token
+            s.save()
+        else:
+            #create
+            s = Student(account=account,password=password,token=token)
+        return s
