@@ -164,9 +164,24 @@ class SyllabusResource(Resource):
     @token_check
     @add_args(parser,('classid',str))
     def post(self,start_year,semester):
+        args = self.parser.parse_args()
+        classid = args['classid']
+
+        lesson = Lesson.objects(lesson_id=classid).first()
         payload = util.parser_token(request.headers['Authorization'])
         if payload.identify == Identify.STUDENT.value:
-            student = Student.objects(account=payload.username).first()
+            person = Student.objects(account=payload.username).first()
+        else:
+            person = Teacher.objects(account=payload.username).first()
+
+        if not person.syllabus.get(start_year+'0'+str(semester)):
+            person.syllabus[start_year+'0'+str(semester)] = Syllabus(year=start_year,semester=semester,lessons=list())
+            person.save()
+        if lesson in person.syllabus[start_year+'0'+str(semester)]['lessons']:
+            return syllabus_result(failed,msg='lesson exist')
+        person.syllabus[start_year+'0'+str(semester)]['lessons'].append(lesson)
+        person.save()
+        return syllabus_result(success,syllabus=person.syllabus[start_year+'0'+str(semester)]['lessons'])
 
 
 def syllabus_result(status_func,msg='',syllabus=list()):
