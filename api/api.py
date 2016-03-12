@@ -128,6 +128,8 @@ def auth_result(status_func,msg='',token='',identify=''):
 
 @api_route('/syllabus/<string:start_year>/<int:semester>')
 class SyllabusResource(Resource):
+    parser = reqparse.RequestParser()
+
     @token_check
     def get(self,start_year,semester):
         """
@@ -158,6 +160,14 @@ class SyllabusResource(Resource):
 
         #判断为教师类型(todo)
             return syllabus_result(success,'teacher should add lesson self')
+
+    @token_check
+    @add_args(parser,('classid',str))
+    def post(self,start_year,semester):
+        payload = util.parser_token(request.headers['Authorization'])
+        if payload.identify == Identify.STUDENT.value:
+            student = Student.objects(account=payload.username).first()
+
 
 def syllabus_result(status_func,msg='',syllabus=list()):
     def lesson2dict(lesson):
@@ -194,7 +204,34 @@ class StudentListResource(Resource):
         else:
             return success(students=lesson['studentList'])
 
+@api_route('/lesson/<string:classid>')
+class LessonResource(Resource):
+    def get(self,classid):
+        lesson = Lesson.objects(lesson_id=classid).first()
+        if lesson:
+            return lesson_result(success,'found lesson in database',lesson=lesson)
+        else:
+            ret_val = util.get_lesson_info(classid)
+            if not ret_val.status == Status.SUCCESS.value:
+                return lesson_result(failed,msg='network error')
+            lesson = Lesson().save_from_dict(ret_val.lesson_info)
+            return lesson_result(success,'found data in network',lesson = lesson)
 
+def lesson_result(status_func,msg='',lesson=None):
+    lesson_info = dict()
+    lesson_info['lesson'] = dict()
+    if lesson:
+        lesson_info['lesson'] = {
+            'id':lesson.lesson_id,
+            'name':lesson.name,
+            'teacher':lesson.teacher,
+            'credit':lesson.credit,
+            'classroom':lesson.classroom,
+            'start_week':lesson.start_week,
+            'end_week':lesson.end_week,
+            'schedule':lesson.schedule
+        }
+    return status_func(msg,**lesson_info)
 
 
 

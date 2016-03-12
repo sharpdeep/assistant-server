@@ -73,7 +73,6 @@ def authenticate(username,passwd,login=False):
         else:
             return success('登陆成功',opener=opener)
 
-
 def get_syllabus_page(username,passwd,start_year=str(datetime.now().year),semester=Semester.AUTUMN.value):
     """
     获取课表页面
@@ -203,6 +202,37 @@ def get_student_list_by_classId(classId):
     studentList = [{'id':student[0],'name':student[1],'gender':student[2],'major':student[3],'priority':student[4],'time':student[5]} for student in studentList[1:]]
     return success(studentList=studentList)
 
+def get_lesson_info(classId):
+    class_detail_msg_url = class_detail_msg_base_url + 'ClassID='+classId
+    try:
+        resp = request.urlopen(class_detail_msg_url,timeout=default_timeout)
+    except Exception as e:
+        return error(Error.CONNECT_ERROR.value)
+    content = resp.read().decode(website_encoding)
+    #parser_content
+    lessonSoup = BeautifulSoup(content,'html.parser')
+
+    def lesson_arg(id,tag = 'span'):
+        return lessonSoup.find(tag,id=id).text.strip()
+
+    lesson_info = dict()
+    if not lesson_arg('ctl00_cpContent_lbl_ClassID'):
+        return failed(msg='class not exist')
+    lesson_info['lesson_id'] = lesson_arg('ctl00_cpContent_lbl_ClassID')
+    lesson_info['name'] = lesson_arg('ctl00_cpContent_lbl_CourseName')
+    lesson_info['teacher'] = lesson_arg('ctl00_cpContent_KkbTeacher',tag = 'a')
+    lesson_info['classroom'] = lesson_arg('ctl00_cpContent_KkbClassroom',tag = 'a')
+
+    raw_time = lesson_arg('ctl00_cpContent_lbl_Time').split('，')
+    lesson_info['start_week'] = int(raw_time[0][:-1].split('-')[0])
+    lesson_info['end_week'] = int(raw_time[0][:-1].split('-')[1])
+    lesson_info['schedule'] = dict()
+
+    for i in range(7):
+        lesson_info['schedule'][str(i)] = ''
+    for t in raw_time[1:]:
+        lesson_info['schedule'][chinese2int(t[1])] = t[3:-2]
+    return success(lesson_info=lesson_info)
 
 
 def gen_token(username,identify):
@@ -215,6 +245,18 @@ def parser_token(token):
         return None
     return toDict(payload)
 
-# if __name__ == '__main__':
-#     studentList = get_student_list_by_classId('59254')
-#     print(studentList)
+def chinese2int(numstr):
+    if numstr == '一':
+        return '1'
+    elif numstr == '二':
+        return '2'
+    elif numstr == '三':
+        return '3'
+    elif numstr == '四':
+        return '4'
+    elif numstr == '五':
+        return '5'
+    elif numstr == '六':
+        return '6'
+    elif numstr == '日':
+        return '0'

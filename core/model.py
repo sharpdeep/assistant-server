@@ -14,7 +14,7 @@ connect(configs.db.name) #连接mongo
 
 class Lesson(Document):
     """
-    lesson_id采用学年+学期+班号，如64417->20130164417
+
     """
     lesson_id = StringField(unique=True)
     name = StringField()
@@ -63,6 +63,21 @@ class Lesson(Document):
             self.schedule[str(i)] = lesson[i+6]
         self.save()
 
+    def save_from_dict(self,lesson_dict):
+        Lid = lesson_dict['lesson_id']
+        if Lesson.objects(lesson_id=Lid).first():
+            return
+        self.lesson_id = lesson_dict['lesson_id']
+        self.name = lesson_dict['name']
+        self.teacher = lesson_dict['teacher']
+        self.classroom = lesson_dict['classroom']
+        self.start_week = lesson_dict['start_week']
+        self.end_week = lesson_dict['end_week']
+        self.schedule = lesson_dict['schedule']
+        self.save()
+        return self
+
+
     def exist(self,leeson_id,start_year,semester):
         return Lesson.objects(leeson_id).first()
 
@@ -70,6 +85,7 @@ class Syllabus(EmbeddedDocument):
     year = StringField()
     semester = IntField()
     lessons = ListField(ReferenceField(Lesson))
+
 
 
 class Teacher(Document):
@@ -139,3 +155,4 @@ class Student(Document):
             #create
             s = Student(account=account,password=password,token=token)
         return s
+
