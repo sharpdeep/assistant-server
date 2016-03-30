@@ -15,7 +15,6 @@ from enum import Enum,unique
 from bs4 import BeautifulSoup
 from uuid import uuid4
 import base64
-from core.model import Lesson
 import logging
 import jwt
 
@@ -29,6 +28,8 @@ schedule_host = 'http://credit.stu.edu.cn/Elective/MyCurriculumSchedule.aspx'
 curriculum_base_url = b'http://credit.stu.edu.cn/Student/StudentTimeTable.aspx?'
 student_info_url = 'http://credit.stu.edu.cn/Student/DisplayStudentInfo.aspx'
 class_detail_msg_base_url = 'http://credit.stu.edu.cn/Info/DisplayKkb.aspx?'
+class_room_info_base_url = 'http://credit.stu.edu.cn/CoursePlan/viewclassroom.aspx?ClassID='
+
 
 @unique
 class Semester(Enum):
@@ -234,6 +235,33 @@ def get_lesson_info(classId):
         lesson_info['schedule'][chinese2int(t[1])] = t[3:-2]
     return success(lesson_info=lesson_info)
 
+def get_class_room_info(classId):
+    class_room_info_url = class_room_info_base_url + classId
+
+    content = _get(class_room_info_url)
+    if not content:
+        return error(Error.CONNECT_ERROR.value)
+
+    #parser_content
+    soup = BeautifulSoup(content,'html.parser')
+    tr = soup.find('tr',class_='DGItemStyle')
+
+    def find_td(index):
+        return tr.find_all('td')[index].text.strip()
+
+    class_room_info = dict()
+    class_room_info['roomid'] = find_td(0)
+    class_room_info['roomname'] = find_td(1)
+    class_room_info['roomtype'] = find_td(2)
+
+    return success(classroom_info=class_room_info)
+
+def _get(url):
+    try:
+        resp = request.urlopen(url,timeout=default_timeout)
+    except:
+        return None
+    return resp.read().decode(website_encoding)
 
 def gen_token(username,identify):
     return jwt.encode({'username':username,'identify':identify,'timestamp':int(datetime.now().timestamp())},configs.app.jwt_secret).decode('utf-8')
@@ -260,3 +288,6 @@ def chinese2int(numstr):
         return '6'
     elif numstr == '日':
         return '0'
+
+if __name__ == '__main__':
+    print(get_class_room_info('58724'))

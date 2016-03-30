@@ -19,13 +19,10 @@ from core.model import *
 from core.status import *
 from core import util
 
-@unique
-class Identify(Enum):
-    STUDENT = 'student'
-    TEACHER = 'teacher'
-
 api = Api(app)
 api_prefix = '/api'
+
+error_code = configs.error_code
 
 def api_route(*urls,**kwargs):
     """
@@ -123,9 +120,6 @@ class AuthResource(Resource):
         else:
                 return auth_result(failed,'failed to login credit')
 
-def auth_result(status_func,msg='',token='',identify=''):
-    return status_func(msg,data={'token':token,'identify':identify})
-
 @api_route('/syllabus/<string:start_year>/<int:semester>')
 class SyllabusResource(Resource):
     parser = reqparse.RequestParser()
@@ -183,6 +177,73 @@ class SyllabusResource(Resource):
         person.save()
         return syllabus_result(success,syllabus=person.syllabus[start_year+'0'+str(semester)]['lessons'])
 
+@api_route('/classinfo/studentlist/<string:classid>')
+class StudentListResource(Resource):
+    @token_check
+    def get(self,classid):
+        lesson = Lesson.objects(lesson_id=classid).first()
+        if len(lesson['studentList']) == 0:
+            ret_val = util.get_student_list_by_classId(classid)
+            if not ret_val.status == Status.SUCCESS.value:
+                return failed(ret_val.msg)
+            lesson['studentList'] = ret_val.studentList
+            lesson.save()
+            return success(students=ret_val.studentList)
+        else:
+            return success(students=lesson['studentList'])
+
+@api_route('/lesson/<string:classid>')
+class LessonResource(Resource):
+    def get(self,classid):
+        lesson = get_or_create_lesson(classid)
+        if lesson:
+            return lesson_result(success,lesson = lesson)
+        return lesson_result(failed,msg='network error')
+
+@api_route('/sign')
+class SignResource(Resource):
+    parser = reqparse.RequestParser()
+
+    @token_check
+    @add_args(parser,('classid',str),('device_id',str),('mac',str))
+    def post(self):
+        args = self.parser.parse_args()
+        device_id = args['device_id']
+        mac = args['mac']
+        classid = args['classid']
+        payload = util.parser_token(request.headers['Authorization'])
+        if payload.identify == Identify.TEACHER.value:
+            return sign_result(failed,msg='老师不用签到',error_code=error_code.sign_identify_error)
+        device_check_val = deviceCheck(payload,device_id)
+        if device_check_val: #是本人
+            time_check_val = isLessonTime(classid)
+            if time_check_val: #时间正确
+                room_check_val = inClassRoom(classid,mac)
+                if room_check_val: #在教室内
+                    repeat_check_val = isSignRepeat(payload.username,classid)
+                    if repeat_check_val:
+                        return sign_result(error,msg='重复签到',error_code=error_code.sign_repeat_error)
+                    elif repeat_check_val is None:
+                        return sign_result(error,msg='未知错误',error_code=error_code.sign_unknow_error)
+                    if sign(payload.username,classid):#没有重复签到
+                        return sign_result(success,msg='签到成功')
+                    return sign_result(error,msg='未知错误',error_code=error_code.sign_unknow_error)
+                elif isinstance(room_check_val,bool):
+                    return sign_result(failed,msg='签到地点错误',error_code=error_code.sign_room_error)
+                else:
+                    return sign_result(error,msg='未知错误',error_code=error_code.sign_unknow_error)
+            elif isinstance(time_check_val,bool):
+                return sign_result(failed,msg='签到时间不对',error_code=error_code.sign_time_error)
+            else:
+                return sign_result(error,msg='未知错误',error_code=error_code.sign_unknow_error)
+        elif isinstance(device_check_val,bool): #失败检查失败
+            return sign_result(failed,msg='不是本人设备',error_code=error_code.sign_device_error)
+        else: #出错，可能是不存在这个人
+            return sign_result(error,msg='未知错误',error_code=error_code.sign_unknow_error)
+
+
+def auth_result(status_func,msg='',token='',identify=''):
+    return status_func(msg,data={'token':token,'identify':identify})
 
 def syllabus_result(status_func,msg='',syllabus=list()):
     def lesson2dict(lesson):
@@ -204,34 +265,6 @@ def syllabus_result(status_func,msg='',syllabus=list()):
         return status_func(msg,syllabuses=classes)
     return failed(msg,syllabuses=syllabus)
 
-@api_route('/classinfo/studentlist/<string:classid>')
-class StudentListResource(Resource):
-    @token_check
-    def get(self,classid):
-        lesson = Lesson.objects(lesson_id=classid).first()
-        if len(lesson['studentList']) == 0:
-            ret_val = util.get_student_list_by_classId(classid)
-            if not ret_val.status == Status.SUCCESS.value:
-                return failed(ret_val.msg)
-            lesson['studentList'] = ret_val.studentList
-            lesson.save()
-            return success(students=ret_val.studentList)
-        else:
-            return success(students=lesson['studentList'])
-
-@api_route('/lesson/<string:classid>')
-class LessonResource(Resource):
-    def get(self,classid):
-        lesson = Lesson.objects(lesson_id=classid).first()
-        if lesson:
-            return lesson_result(success,'found lesson in database',lesson=lesson)
-        else:
-            ret_val = util.get_lesson_info(classid)
-            if not ret_val.status == Status.SUCCESS.value:
-                return lesson_result(failed,msg='network error')
-            lesson = Lesson().save_from_dict(ret_val.lesson_info)
-            return lesson_result(success,'found data in network',lesson = lesson)
-
 def lesson_result(status_func,msg='',lesson=None):
     lesson_info = dict()
     lesson_info['lesson'] = dict()
@@ -247,6 +280,10 @@ def lesson_result(status_func,msg='',lesson=None):
             'schedule':lesson.schedule
         }
     return status_func(msg,**lesson_info)
+
+def sign_result(status_func,msg='',error_code=configs.error_code.success):
+
+    return status_func(msg,error_code=error_code)
 
 
 
