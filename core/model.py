@@ -138,7 +138,7 @@ class Lesson(Document):
         if lesson_time_str is None:
             return False #请假当天没课，请假时间无效
         lesson_start_time_str = lesson_time_str[0]
-        lesson_start_time = datetime(year=now.year,month=now.month,day=now.day,
+        lesson_start_time = datetime(year=leave_date.year,month=leave_date.month,day=leave_date.day,
                                      hour=configs.lesson_time[lesson_start_time_str].hour,
                                      minute=configs.lesson_time[lesson_start_time_str].minute)
 

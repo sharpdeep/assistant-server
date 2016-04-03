@@ -256,6 +256,8 @@ class LeaveResource(Resource):
         leave_reason = args['leave_reason']
         classid = args['classid']
 
+        print(classid,leave_type,leave_date,leave_reason)
+
         leave = Leave(studentid=username,classid=classid,leave_type=leave_type,leave_reason=leave_reason,leave_date=leave_date)
 
         time_check_val = leaveTimeCheck(leave)
