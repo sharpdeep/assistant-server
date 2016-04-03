@@ -20,6 +20,20 @@ class Identify(Enum):
     STUDENT = 'student'
     TEACHER = 'teacher'
 
+@unique
+class LeaveType(Enum):
+    OTHER = 0 #其他
+    SICK = 1 #病假
+    AFFAIR = 2 #事假
+
+#请假
+class Leave(EmbeddedDocument):
+    studentid = StringField()
+    classid = StringField()
+    leave_type = IntField(default=LeaveType.OTHER.value)
+    leave_reason = StringField(default='')
+    leave_date = DateTimeField()
+
 class Lesson(Document):
     """
 
@@ -34,6 +48,7 @@ class Lesson(Document):
     schedule = DictField()
     studentList = ListField()
     signlog = MapField(ListField())
+    leavelog = MapField(ListField(EmbeddedDocumentField(Leave)))
 
     def __str__(self):
         lesson_info = '班号:\t'+self.lesson_id+'\t\n'+\
@@ -90,18 +105,23 @@ class Lesson(Document):
     def exist(self,leeson_id,start_year,semester):
         return Lesson.objects(leeson_id).first()
 
-    def is_lesson_time(self,now):
+    def get_lesson_time_str(self,now):
         weekday = now.weekday()
         if weekday == 6:
             weekday = 0
         else:
             weekday += 1
-
         lesson_time = self.schedule[str(weekday)]
         if len(lesson_time) == 0:
+            return None
+        return lesson_time
+
+    def is_lesson_time(self,now):
+        lesson_time_str = self.get_lesson_time_str(now)
+        if lesson_time_str is None:
             return False #当天没课
         else:
-            for t in lesson_time:
+            for t in lesson_time_str:
                 ltime = datetime(year=now.year,month=now.month,day=now.day,
                                  hour=configs.lesson_time[t].hour,
                                  minute=configs.lesson_time[t].minute)
@@ -109,6 +129,20 @@ class Lesson(Document):
                     print('sign in %s'%t)
                     return True
             return False
+
+    def is_leave_time_avaliable(self,now,leave_date):
+        #请假时间是否有效：请假当天是否有课程？现在是否在课程开始之前？
+        if leave_date.date() < now.date():
+            return False
+        lesson_time_str = self.get_lesson_time_str(leave_date)
+        if lesson_time_str is None:
+            return False #请假当天没课，请假时间无效
+        lesson_start_time_str = lesson_time_str[0]
+        lesson_start_time = datetime(year=now.year,month=now.month,day=now.day,
+                                     hour=configs.lesson_time[lesson_start_time_str].hour,
+                                     minute=configs.lesson_time[lesson_start_time_str].minute)
+
+        return lesson_start_time >= now
 
 
 class Syllabus(EmbeddedDocument):
@@ -153,6 +187,7 @@ class Student(Document):
     token = StringField()
     syllabus = MapField(EmbeddedDocumentField(Syllabus)) #key为学年+学期，value为读音课表
     signlog = MapField(ListField())
+    leavelog = MapField(ListField(EmbeddedDocumentField(Leave)))
 
     def save_from_dict(self,info):
         self.name = info['name']
@@ -192,7 +227,6 @@ class ClassRoom(Document):
     roomname = StringField(required=True,unique=True)
     roomtype = StringField()
     roommac = ListField(default=[roomname])
-
 
 def get_or_create_lesson(classid):
     lesson = Lesson.objects(lesson_id=classid).first()
@@ -251,6 +285,16 @@ def deviceCheck(payload,deviceId):
         return person.deviceid == deviceId
     return None
 
+def isSignRepeat(username,classid):
+    lesson = get_or_create_lesson(classid)
+    if lesson is None:
+        return None
+    now = datetime.now()
+    sign_student_list = lesson.signlog.get(now.strftime('%Y%m%d'))
+    if sign_student_list and username in sign_student_list:
+        return True
+    return False
+
 def sign(username,classid):
     lesson = get_or_create_lesson(classid)
     student = get_student(account=username)
@@ -273,12 +317,41 @@ def sign(username,classid):
 
     return True
 
-def isSignRepeat(username,classid):
-    lesson = get_or_create_lesson(classid)
+def isAskLeaveRepeat(leave):
+    lesson = get_or_create_lesson(leave.classid)
     if lesson is None:
         return None
-    now = datetime.now()
-    sign_student_list = lesson.signlog.get(now.strftime('%Y%m%d'))
-    if sign_student_list and username in sign_student_list:
+    leave_list = lesson.leavelog.get(leave.leave_date.strftime('%Y%m%d'))
+    if leave_list and leave.studentid in [l.studentid for l in leave_list]:
         return True
     return False
+
+def leaveTimeCheck(leave):
+    lesson = get_or_create_lesson(leave.classid)
+    if lesson is None:
+        return None
+
+    return lesson.is_leave_time_avaliable(datetime.now(),leave.leave_date)
+
+
+def askLeave(leave):
+    lesson = get_or_create_lesson(leave.classid)
+    student = get_student(account=leave.studentid)
+    if lesson is None or student is None:
+        return None
+
+    lesson_leave_list = lesson.leavelog.get(leave.leave_date.strftime('%Y%m%d'))
+    if not lesson_leave_list:
+        lesson_leave_list = list()
+    lesson_leave_list.append(leave)
+    lesson.leavelog[leave.leave_date.strftime('%Y%m%d')] = lesson_leave_list
+    lesson.save()
+
+    student_leave_list = student.leavelog.get(leave.leave_date.strftime('%Y%m%d'))
+    if not student_leave_list:
+        student_leave_list = list()
+    student_leave_list.append(leave)
+    student.leavelog[leave.leave_date.strftime('%Y%m%d')] = student_leave_list
+    student.save()
+    #todo 发送邮件给老师，更新老师的model
+    return True

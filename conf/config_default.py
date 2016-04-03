@@ -60,12 +60,21 @@ configs = {
     #如 签到时发生错误是10****,签到时device相关错误是100***
     'error_code':{
         'success':0,#成功
-        'sign_unknow_error':100001,#未知错误
-        'sign_device_error':101001,#签到device验证错误,不是本人
-        'sign_day_error':102001,#签到当天没课
-        'sign_time_error':102002,#签到时间错误
-        'sign_room_error':103001,#签到地点错误
-        'sign_identify_error':104001,#身份错误
-        'sign_repeat_error':105001,#重复签到
+        'unknow_error':1,#未知错误
+
+        'sign_device_error':100001,#签到device验证错误,不是本人
+        'sign_day_error':101001,#签到当天没课
+        'sign_time_error':101002,#签到时间错误
+        'sign_room_error':102001,#签到地点错误
+        'sign_identify_error':103001,#签到身份错误
+        'sign_repeat_error':104001,#重复签到
+
+        'token_no_exist_error':110001, #没有token
+        'token_expire_error':110002, #token过期
+        'token_illegal_error':110003, #token非法
+
+        'leave_identify_error':120001,#请假身份错误
+        'leave_repeat_error':120002, #请假重复
+        'leave_time_error':120003, #请假时间不合理
     }
 }

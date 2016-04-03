@@ -74,15 +74,18 @@ def add_args(parser,*arguments):
 def token_check(func):
     @functools.wraps(func)
     def wrapper(*args,**kwargs):
+        if not request.headers.get('Authorization'):
+            return base_result(failed,msg='no token',error_code=error_code.token_no_exist_error)
+
         token = request.headers['Authorization']
         # print(token)
         payload = util.parser_token(token)
         print('['+payload.identify+']'+payload.username+' auth in '+str(datetime.fromtimestamp(payload.timestamp)))
         nowtime = int(datetime.now().timestamp())
         if not payload:
-            return syllabus_result(failed,'illegal token')
+            return base_result(failed,msg='illegal token',error_code=error_code.token_illegal_error)
         if nowtime - payload.timestamp > configs.app.exprire:
-            return syllabus_result(failed,'exprire token')
+            return base_result(failed,msg='expire token',error_code=error_code.token_expire_error)
         else:
             return func(*args,**kwargs)
     return wrapper
@@ -214,6 +217,7 @@ class SignResource(Resource):
         payload = util.parser_token(request.headers['Authorization'])
         if payload.identify == Identify.TEACHER.value:
             return sign_result(failed,msg='老师不用签到',error_code=error_code.sign_identify_error)
+
         device_check_val = deviceCheck(payload,device_id)
         if device_check_val: #是本人
             time_check_val = isLessonTime(classid)
@@ -223,23 +227,49 @@ class SignResource(Resource):
                     repeat_check_val = isSignRepeat(payload.username,classid)
                     if repeat_check_val:
                         return sign_result(error,msg='重复签到',error_code=error_code.sign_repeat_error)
-                    elif repeat_check_val is None:
-                        return sign_result(error,msg='未知错误',error_code=error_code.sign_unknow_error)
                     if sign(payload.username,classid):#没有重复签到
                         return sign_result(success,msg='签到成功')
-                    return sign_result(error,msg='未知错误',error_code=error_code.sign_unknow_error)
                 elif isinstance(room_check_val,bool):
                     return sign_result(failed,msg='签到地点错误',error_code=error_code.sign_room_error)
-                else:
-                    return sign_result(error,msg='未知错误',error_code=error_code.sign_unknow_error)
             elif isinstance(time_check_val,bool):
                 return sign_result(failed,msg='签到时间不对',error_code=error_code.sign_time_error)
-            else:
-                return sign_result(error,msg='未知错误',error_code=error_code.sign_unknow_error)
         elif isinstance(device_check_val,bool): #失败检查失败
             return sign_result(failed,msg='不是本人设备',error_code=error_code.sign_device_error)
-        else: #出错，可能是不存在这个人
-            return sign_result(error,msg='未知错误',error_code=error_code.sign_unknow_error)
+        return sign_result(error,msg='未知错误',error_code=error_code.unknow_error)
+
+@api_route('/leave')
+class LeaveResource(Resource):
+    parser = reqparse.RequestParser()
+
+    @token_check
+    @add_args(parser,('leave_date',str),('leave_type',int),('leave_reason',str),('classid',str))
+    def post(self):
+        payload = util.parser_token(request.headers['Authorization'])
+        if payload.identify == Identify.TEACHER.value:
+            return leave_result(failed,msg='教师不用请假',error_code=error_code.leave_identify_error)
+
+        username = payload.username
+
+        args = self.parser.parse_args()
+        leave_date = datetime.strptime(args['leave_date'],'%Y%m%d')
+        leave_type = args['leave_type']
+        leave_reason = args['leave_reason']
+        classid = args['classid']
+
+        leave = Leave(studentid=username,classid=classid,leave_type=leave_type,leave_reason=leave_reason,leave_date=leave_date)
+
+        time_check_val = leaveTimeCheck(leave)
+        if time_check_val:
+            repeat_check_val = isAskLeaveRepeat(leave)
+            if repeat_check_val:
+                return leave_result(failed,msg='重复请假',error_code=error_code.leave_repeat_error)
+            elif isinstance(repeat_check_val,bool):
+                if askLeave(leave):
+                    return leave_result(success,msg='请假成功,等待老师同意')
+        elif isinstance(time_check_val,bool):
+            return leave_result(failed,msg='时间有问题',error_code=error_code.leave_time_error)
+        return leave_result(failed,msg='未知错误',error_code=error_code.unknow_error)
+
 
 
 def auth_result(status_func,msg='',token='',identify=''):
@@ -281,10 +311,9 @@ def lesson_result(status_func,msg='',lesson=None):
         }
     return status_func(msg,**lesson_info)
 
-def sign_result(status_func,msg='',error_code=configs.error_code.success):
-
+def base_result(status_func,msg='',error_code=configs.error_code.success):
     return status_func(msg,error_code=error_code)
 
-
-
+sign_result = base_result
+leave_result = base_result
 
