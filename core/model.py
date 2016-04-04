@@ -34,6 +34,16 @@ class Leave(EmbeddedDocument):
     leave_reason = StringField(default='')
     leave_date = DateTimeField()
 
+
+    def toDict(self):
+        return {
+            'studentid':self.studentid,
+            'classid':self.classid,
+            'leave_type':self.leave_type,
+            'leave_date':datetime.strftime(self.leave_date,'%Y%m%d'),
+            'leave_reason':self.leave_reason
+        }
+
 class Lesson(Document):
     """
 

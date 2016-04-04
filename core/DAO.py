@@ -181,3 +181,39 @@ def getStudentSignLogCount(username,dateStr):
 	for v in signlog.values():
 		count += len(v)
 	return count
+
+def getLessonLeaveLog(classid,dateStr):
+	lesson = get_or_create_lesson(classid)
+	if lesson is None:
+		return None
+	if dateStr == 'all':
+		return lesson.leavelog
+	leaveList = lesson.leavelog.get(dateStr)
+	return {dateStr:leaveList} if leaveList else None
+
+def getLessonLeaveLogCount(classid,dateStr):
+	leavelog = getLessonLeaveLog(classid,dateStr)
+	if leavelog is None or not isinstance(leavelog,dict):
+		return 0
+	count = 0
+	for v in leavelog.values():
+		count += len(v)
+	return count
+
+def getStudentLeaveLog(username,dateStr):
+	student = get_student(account=username)
+	if student is None:
+		return None
+	if dateStr == 'all':
+		return student.leavelog
+	leaveList = student.leavelog.get(dateStr)
+	return {dateStr:leaveList} if leaveList else None
+
+def getStudentLeaveLogCount(username,dateStr):
+	leavelog = getStudentLeaveLog(username,dateStr)
+	if leavelog is None or not isinstance(leavelog,dict):
+		return 0
+	count = 0
+	for v in leavelog.values():
+		count += len(v)
+	return count
