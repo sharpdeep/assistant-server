@@ -17,6 +17,7 @@ import functools
 from enum import Enum,unique
 from core.model import *
 from core.status import *
+from core.DAO import *
 from core import util
 
 api = Api(app)
@@ -218,24 +219,57 @@ class SignResource(Resource):
         if payload.identify == Identify.TEACHER.value:
             return sign_result(failed,msg='老师不用签到',error_code=error_code.sign_identify_error)
 
-        device_check_val = deviceCheck(payload,device_id)
-        if device_check_val: #是本人
-            time_check_val = isLessonTime(classid)
-            if time_check_val: #时间正确
-                room_check_val = inClassRoom(classid,mac)
-                if room_check_val: #在教室内
-                    repeat_check_val = isSignRepeat(payload.username,classid)
-                    if repeat_check_val:
-                        return sign_result(error,msg='重复签到',error_code=error_code.sign_repeat_error)
-                    if sign(payload.username,classid):#没有重复签到
-                        return sign_result(success,msg='签到成功')
-                elif isinstance(room_check_val,bool):
-                    return sign_result(failed,msg='签到地点错误',error_code=error_code.sign_room_error)
-            elif isinstance(time_check_val,bool):
-                return sign_result(failed,msg='签到时间不对',error_code=error_code.sign_time_error)
-        elif isinstance(device_check_val,bool): #失败检查失败
-            return sign_result(failed,msg='不是本人设备',error_code=error_code.sign_device_error)
+        leave_check_val = isAskLeaveBeforeSign(payload.username,classid)
+        if leave_check_val:
+            return sign_result(error,msg='已经请假过了，不必签到',error_code=error_code.sign_leave_before_error)
+        elif isinstance(leave_check_val,bool):
+            device_check_val = deviceCheck(payload,device_id)
+            if device_check_val: #是本人
+                time_check_val = isLessonTime(classid)
+                if time_check_val: #时间正确
+                    room_check_val = inClassRoom(classid,mac)
+                    if room_check_val: #在教室内
+                        repeat_check_val = isSignRepeat(payload.username,classid)
+                        if repeat_check_val:
+                            return sign_result(error,msg='重复签到',error_code=error_code.sign_repeat_error)
+                        if sign(payload.username,classid):#没有重复签到
+                            return sign_result(success,msg='签到成功')
+                    elif isinstance(room_check_val,bool):
+                        return sign_result(failed,msg='签到地点错误',error_code=error_code.sign_room_error)
+                elif isinstance(time_check_val,bool):
+                    return sign_result(failed,msg='签到时间不对',error_code=error_code.sign_time_error)
+            elif isinstance(device_check_val,bool): #失败检查失败
+                return sign_result(failed,msg='不是本人设备',error_code=error_code.sign_device_error)
         return sign_result(error,msg='未知错误',error_code=error_code.unknow_error)
+
+@api_route('/lessonsignlist/<string:classid>/<string:date>')
+class LessonSignListResource(Resource):
+    def get(self,classid,date):
+        signlog = getLessonSignLog(classid,date)
+        if signlog is None:
+            return signlist_result(failed,msg='不存在签到记录',error_code=error_code.signlist_exist_error)
+        else:
+            return signlist_result(success,signlog=signlog)
+
+@api_route('/lessonsignlist/<string:classid>/<string:date>/count')
+class LessonSignListCountResource(Resource):
+    def get(self,classid,date):
+        return signlist_count_result(success,msg=str(getLessonSignListCount(classid,date)))
+
+@api_route('/studentsignlist/<string:username>/<string:date>')
+class StudentSignListResource(Resource):
+    def get(self,username,date):
+        signlog = getStudentSignLog(username,date)
+        if signlog is None:
+            return signlist_result(failed,msg='不存在签到记录',error_code=error_code.signlist_exist_error)
+        else:
+            return signlist_result(success,signlog=signlog)
+
+@api_route('/studentsignlist/<string:username>/<string:date>/count')
+class StudentSignListCountResource(Resource):
+    def get(self,username,date):
+        return signlist_count_result(success,msg=str(getStudentSignLogCount(username,date)))
+
 
 @api_route('/leave')
 class LeaveResource(Resource):
@@ -271,8 +305,6 @@ class LeaveResource(Resource):
         elif isinstance(time_check_val,bool):
             return leave_result(failed,msg='时间有问题',error_code=error_code.leave_time_error)
         return leave_result(failed,msg='未知错误',error_code=error_code.unknow_error)
-
-
 
 def auth_result(status_func,msg='',token='',identify=''):
     return status_func(msg,data={'token':token,'identify':identify})
@@ -316,6 +348,10 @@ def lesson_result(status_func,msg='',lesson=None):
 def base_result(status_func,msg='',error_code=configs.error_code.success):
     return status_func(msg,error_code=error_code)
 
+def signlist_result(status_func,msg='',error_code=configs.error_code.success,signlog=dict()):
+    return status_func(msg,error_code=error_code,signlog=signlog)
+
 sign_result = base_result
 leave_result = base_result
+signlist_count_result = base_result
 

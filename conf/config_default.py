@@ -68,6 +68,7 @@ configs = {
         'sign_room_error':102001,#签到地点错误
         'sign_identify_error':103001,#签到身份错误
         'sign_repeat_error':104001,#重复签到
+        'sign_leave_before_error':105001,#签到的课程之前请假了
 
         'token_no_exist_error':110001, #没有token
         'token_expire_error':110002, #token过期
@@ -76,5 +77,8 @@ configs = {
         'leave_identify_error':120001,#请假身份错误
         'leave_repeat_error':120002, #请假重复
         'leave_time_error':120003, #请假时间不合理
+
+        'signlist_condition_error':130001,#查询条件错误
+        'signlist_exist_error':130002,#不存在签到记录
     }
 }
