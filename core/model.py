@@ -34,6 +34,7 @@ class Leave(EmbeddedDocument):
     leave_reason = StringField(default='')
     leave_date = DateTimeField()
 
+
 class Lesson(Document):
     """
 
@@ -114,7 +115,7 @@ class Lesson(Document):
         lesson_time = self.schedule[str(weekday)]
         if len(lesson_time) == 0:
             return None
-        return lesson_time
+        return lesson_time[1:] if lesson_time[0] in['单','双'] else lesson_time
 
     def is_lesson_time(self,now):
         lesson_time_str = self.get_lesson_time_str(now)
