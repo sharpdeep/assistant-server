@@ -29,7 +29,9 @@ class LeaveType(Enum):
 #请假
 class Leave(EmbeddedDocument):
     studentid = StringField()
+    studentname = StringField()
     classid = StringField()
+    classname = StringField()
     leave_type = IntField(default=LeaveType.OTHER.value)
     leave_reason = StringField(default='')
     leave_date = DateTimeField()
@@ -38,7 +40,9 @@ class Leave(EmbeddedDocument):
     def toDict(self):
         return {
             'studentid':self.studentid,
+            'studentname':self.studentname,
             'classid':self.classid,
+            'classname':self.classname,
             'leave_type':self.leave_type,
             'leave_date':datetime.strftime(self.leave_date,'%Y%m%d'),
             'leave_reason':self.leave_reason

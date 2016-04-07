@@ -95,14 +95,14 @@ def sign(username,classid):
     sign_student_list = lesson.signlog.get(now.strftime('%Y%m%d'))
     if not sign_student_list:
         sign_student_list = list()
-    sign_student_list.append(username)
+    sign_student_list.append({'student_id':username,'student_name':student.name})
     lesson.signlog[now.strftime('%Y%m%d')] = sign_student_list
     lesson.save()
 
     sign_class_list = student.signlog.get(now.strftime('%Y%m%d'))
     if not sign_class_list:
         sign_class_list = list()
-    sign_class_list.append(lesson.lesson_id)
+    sign_class_list.append({'lesson_id':classid,'lesson_name':lesson.name})
     student.signlog[now.strftime('%Y%m%d')] = sign_class_list
     student.save()
 
@@ -129,6 +129,9 @@ def askLeave(leave):
     student = get_student(account=leave.studentid)
     if lesson is None or student is None:
         return None
+
+    leave.studentname = student.name
+    leave.classname = lesson.name
 
     lesson_leave_list = lesson.leavelog.get(leave.leave_date.strftime('%Y%m%d'))
     if not lesson_leave_list:
