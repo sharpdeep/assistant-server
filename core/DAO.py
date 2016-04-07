@@ -83,7 +83,7 @@ def isAskLeaveBeforeSign(username,classid):
         return None
     leave_list = student.leavelog.get(datetime.now().strftime('%Y%m%d'))
     if leave_list:
-        return True if username in [leave.studentid for leave in leave_list] else False
+        return True if classid in [leave.classid for leave in leave_list] else False
     return False
 
 def sign(username,classid):
