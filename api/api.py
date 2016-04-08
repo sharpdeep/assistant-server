@@ -381,15 +381,22 @@ def base_result(status_func,msg='',error_code=configs.error_code.success):
     return status_func(msg,error_code=error_code)
 
 def signlist_result(status_func,msg='',error_code=configs.error_code.success,signlog=dict()):
-    return status_func(msg,error_code=error_code,signlog=signlog)
+    logs = list()
+    for date,signlist in signlog.items():
+        sign = {'date':date}
+        for s in signlist:
+            sign.update(s)
+            logs.append(sign)
+    return status_func(msg,error_code=error_code,signlog=logs)
 
 def leavelist_result(status_func,msg='',error_code=error_code.success,leavelog=dict()):
-    log = dict()
+    logs = list()
     for date,leavelist in leavelog.items():
-        log[date] = list()
-        for leave in leavelist:
-            log[date].append(leave.toDict())
-    return status_func(msg,error_code=error_code,leavelog=log)
+        leave = {'date':date}
+        for l in leavelist:
+            leave.update(l.toDict())
+            logs.append(leave)
+    return status_func(msg,error_code=error_code,leavelog=logs)
 
 sign_result = base_result
 leave_result = base_result
