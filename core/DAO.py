@@ -9,6 +9,12 @@
 from datetime import datetime
 from core.model import *
 
+def isTeacher(payload):
+    return payload.identify == Identify.TEACHER.value
+
+def isStudent(payload):
+    return payload.identify == Identify.STUDENT.value
+
 def get_or_create_lesson(classid):
     lesson = Lesson.objects(lesson_id=classid).first()
     if not lesson:
@@ -220,3 +226,23 @@ def getStudentLeaveLogCount(username,dateStr):
 	for v in leavelog.values():
 		count += len(v)
 	return count
+
+def getUserSyllabus(user,start_year,semester):
+    syllabus = user.syllabus.get(start_year+'0'+str(semester))
+    if not syllabus:
+        return None
+    return syllabus.lessons
+
+def addLesson(user,start_year,semester,classid):
+    lesson = get_or_create_lesson(classid)
+    syllabus = getUserSyllabus(user,start_year,semester)
+    if lesson is None:
+        return None
+    if syllabus is None:
+        user.syllabus[start_year+'0'+str(semester)] = Syllabus(year=start_year,semester=semester,lessons=list())
+        user.save()
+    if lesson in user.syllabus[start_year+'0'+str(semester)]['lessons']:
+        return False
+    user.syllabus[start_year+'0'+str(semester)]['lessons'].append(lesson)
+    user.save()
+    return True

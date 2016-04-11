@@ -83,5 +83,6 @@ configs = {
 
         'leavelist_condition_error':140001,#查询条件错误
         'leavelist_exist_error':140002,#不存在请假记录
+
     }
 }

@@ -155,37 +155,40 @@ class SyllabusResource(Resource):
             else:
                 syllabus = student.syllabus.get(start_year+'0'+str(semester)).lessons
                 return syllabus_result(success,'got syllabus from database',syllabus=syllabus)
-
-        #判断为教师类型(todo)
-            return syllabus_result(success,'teacher should add lesson self')
+        else:
+            teacher = get_teacher(account=payload.username)
+            if not teacher:
+                return syllabus_result(error,'不存在该用户')
+            syllabus = getUserSyllabus(teacher,start_year,semester)
+            if syllabus is None:
+                return syllabus_result(failed,'not exist syllabus')
+            return syllabus_result(success,'数据库中有课表数据',syllabus=syllabus)
 
     @token_check
     @add_args(parser,('classid',str))
     def post(self,start_year,semester):
         args = self.parser.parse_args()
         classid = args['classid']
-
-        lesson = Lesson.objects(lesson_id=classid).first()
         payload = util.parser_token(request.headers['Authorization'])
-        if payload.identify == Identify.STUDENT.value:
-            person = Student.objects(account=payload.username).first()
-        else:
-            person = Teacher.objects(account=payload.username).first()
 
-        if not person.syllabus.get(start_year+'0'+str(semester)):
-            person.syllabus[start_year+'0'+str(semester)] = Syllabus(year=start_year,semester=semester,lessons=list())
-            person.save()
-        if lesson in person.syllabus[start_year+'0'+str(semester)]['lessons']:
-            return syllabus_result(failed,msg='lesson exist')
-        person.syllabus[start_year+'0'+str(semester)]['lessons'].append(lesson)
-        person.save()
-        return syllabus_result(success,syllabus=person.syllabus[start_year+'0'+str(semester)]['lessons'])
+        if isStudent(payload):
+            person = get_student(account=payload.username)
+        else:
+            person = get_teacher(account=payload.username)
+
+        addLesson(person,start_year,semester,classid)
+
+        syllabus = getUserSyllabus(person,start_year,semester)
+        if syllabus is None:
+            return syllabus_result(failed,'添加失败')
+
+        return syllabus_result(success,syllabus=syllabus)
 
 @api_route('/classinfo/studentlist/<string:classid>')
 class StudentListResource(Resource):
     @token_check
     def get(self,classid):
-        lesson = Lesson.objects(lesson_id=classid).first()
+        lesson = get_or_create_lesson(classid)
         if len(lesson['studentList']) == 0:
             ret_val = util.get_student_list_by_classId(classid)
             if not ret_val.status == Status.SUCCESS.value:
