@@ -233,6 +233,17 @@ def getUserSyllabus(user,start_year,semester):
         return None
     return syllabus.lessons
 
+
+def isSyllabusConflict(lesson,lessons):
+    times = [(k,[t for t in v]) for k,v in lesson.schedule.items() if not len(v) == 0]
+    print(times)
+    for l in lessons:
+        for t in times:
+            for i in t[1]:
+                if i in l.schedule[t[0]]:
+                    return True
+    return False
+
 def addLesson(user,start_year,semester,classid):
     lesson = get_or_create_lesson(classid)
     syllabus = getUserSyllabus(user,start_year,semester)
@@ -243,6 +254,12 @@ def addLesson(user,start_year,semester,classid):
         user.save()
     if lesson in user.syllabus[start_year+'0'+str(semester)]['lessons']:
         return False
+
+    conflict_check_val = isSyllabusConflict(lesson,getUserSyllabus(user,start_year,semester))
+    if conflict_check_val:
+        print("课程时间有冲突")
+        return False
+
     user.syllabus[start_year+'0'+str(semester)]['lessons'].append(lesson)
     user.save()
     return True

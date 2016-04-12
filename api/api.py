@@ -81,6 +81,8 @@ def token_check(func):
         token = request.headers['Authorization']
         # print(token)
         payload = util.parser_token(token)
+        if payload is None:
+            return base_result(failed,msg='no token',error_code=error_code.token_no_exist_error)
         print('['+payload.identify+']'+payload.username+' auth in '+str(datetime.fromtimestamp(payload.timestamp)))
         nowtime = int(datetime.now().timestamp())
         if not payload:
@@ -176,13 +178,16 @@ class SyllabusResource(Resource):
         else:
             person = get_teacher(account=payload.username)
 
-        addLesson(person,start_year,semester,classid)
+        ret = addLesson(person,start_year,semester,classid)
 
-        syllabus = getUserSyllabus(person,start_year,semester)
-        if syllabus is None:
+        if ret:
+            syllabus = getUserSyllabus(person,start_year,semester)
+            return syllabus_result(success,'添加成功',syllabus=syllabus)
+        elif isinstance(ret,bool):
             return syllabus_result(failed,'添加失败')
 
-        return syllabus_result(success,syllabus=syllabus)
+        return syllabus_result(error,'服务器未知错误')
+
 
 @api_route('/classinfo/studentlist/<string:classid>')
 class StudentListResource(Resource):
