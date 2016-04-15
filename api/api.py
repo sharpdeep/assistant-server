@@ -365,6 +365,13 @@ class LessonLikeResource(Resource):
 
         return lesson_like_result(error,msg="未知错误",error_code=error_code.unknow_error)
 
+    def get(self,classid):
+        payload = util.parser_token(request.headers['Authorization'])
+        like_count_ret = getLessonLikeListCount(classid)
+        if like_count_ret is None:
+            return lesson_like_result(error,msg="未知错误",error_code=error_code.unknow_error)
+        return lesson_like_result(success,msg=str(like_count_ret))
+
 
 def auth_result(status_func,msg='',token='',identify=''):
     return status_func(msg,data={'token':token,'identify':identify})

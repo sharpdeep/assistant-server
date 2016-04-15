@@ -289,3 +289,9 @@ def likeLesson(username,classid):
     lesson.save()
     return True
 
+def getLessonLikeListCount(classid):
+    lesson = get_or_create_lesson(classid)
+    if lesson is None:
+        return None
+
+    return 0 if not lesson.likeList else len(lesson.likeList)
