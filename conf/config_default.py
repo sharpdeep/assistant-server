@@ -84,5 +84,8 @@ configs = {
         'leavelist_condition_error':140001,#查询条件错误
         'leavelist_exist_error':140002,#不存在请假记录
 
+        'like_lesson_repeat_error':150001,#课程点赞重复
+        'like_lesson_failed_error':150002,#点赞失败
+
     }
 }

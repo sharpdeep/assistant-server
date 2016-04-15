@@ -263,3 +263,29 @@ def addLesson(user,start_year,semester,classid):
     user.syllabus[start_year+'0'+str(semester)]['lessons'].append(lesson)
     user.save()
     return True
+
+def isLikeLessonBefore(username,classid):
+    lesson = get_or_create_lesson(classid)
+    if lesson is None:
+        return None
+
+    if not lesson.likeList:
+        lesson.likeList = list()
+        lesson.save()
+        return False
+
+    return True if username in lesson.likeList else False
+
+def likeLesson(username,classid):
+    lesson = get_or_create_lesson(classid)
+    if lesson is None:
+        return None
+
+    if not lesson.likeList:
+        lesson.likeList = list()
+        lesson.save()
+
+    lesson.likeList.append(username)
+    lesson.save()
+    return True
+

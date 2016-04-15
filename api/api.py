@@ -346,6 +346,26 @@ class LeaveResource(Resource):
             return leave_result(failed,msg='时间有问题',error_code=error_code.leave_time_error)
         return leave_result(failed,msg='未知错误',error_code=error_code.unknow_error)
 
+@api_route('/like/lesson/<string:classid>')
+class LessonLikeResource(Resource):
+    parser = reqparse.RequestParser()
+
+    @token_check
+    def post(self,classid):
+        payload = util.parser_token(request.headers['Authorization'])
+        repeat_check_val = isLikeLessonBefore(payload.username,classid)
+        if repeat_check_val:
+            return lesson_like_result(failed,msg="重复点赞",error_code=error_code.like_lesson_repeat_error)
+        elif isinstance(repeat_check_val,bool):
+            like_ret = likeLesson(payload.username,classid)
+            if like_ret:
+                return lesson_like_result(success,msg="点赞成功")
+            elif isinstance(like_ret,bool):
+                return lesson_like_result(failed,msg="点赞失败",error_code=error_code.like_lesson_failed_error)
+
+        return lesson_like_result(error,msg="未知错误",error_code=error_code.unknow_error)
+
+
 def auth_result(status_func,msg='',token='',identify=''):
     return status_func(msg,data={'token':token,'identify':identify})
 
@@ -410,4 +430,5 @@ sign_result = base_result
 leave_result = base_result
 signlist_count_result = base_result
 leavelist_count_result = base_result
+lesson_like_result = base_result
 

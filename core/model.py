@@ -63,6 +63,7 @@ class Lesson(Document):
     studentList = ListField()
     signlog = MapField(ListField())
     leavelog = MapField(ListField(EmbeddedDocumentField(Leave)))
+    likeList = ListField(default=list())
 
     def __str__(self):
         lesson_info = '班号:\t'+self.lesson_id+'\t\n'+\
