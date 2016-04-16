@@ -12,6 +12,7 @@ from datetime import datetime
 from mongoengine import *
 from conf.config import configs
 from datetime import datetime
+import time
 
 connect(configs.db.name) #连接mongo
 
@@ -25,6 +26,11 @@ class LeaveType(Enum):
     OTHER = 0 #其他
     SICK = 1 #病假
     AFFAIR = 2 #事假
+
+@unique
+class DiscussionType(Enum):
+    LESSON = 0
+    WHOLE = 1
 
 #请假
 class Leave(EmbeddedDocument):
@@ -242,3 +248,33 @@ class ClassRoom(Document):
     roomname = StringField(required=True,unique=True)
     roomtype = StringField()
     roommac = ListField(default=[roomname])
+
+
+class Discussion(Document):
+    type = IntField(default=DiscussionType.LESSON.value)
+    fromUserName = StringField()
+    toUserName = StringField()
+    content = StringField()
+    createTime = DateTimeField()
+    updateTime = DateTimeField()
+
+    meta = {
+        'indexes': [
+            'toUserName',
+            ('type','toUserName','+createTime')
+        ],
+        'ordering': ['createTime']
+    }
+
+    def toDict(self):
+        datetime.now().time()
+        return {
+            'type':self.type,
+            'fromUserName':self.fromUserName,
+            'toUserName':self.toUserName,
+            'content':self.content,
+            'createTime':datetime.strftime(self.createTime,'%Y-%m-%d %H:%M:%S'),
+            'updateTime':datetime.strftime(self.updateTime,'%Y-%m-%d %H:%M:%S')
+        }
+
+

@@ -295,3 +295,13 @@ def getLessonLikeListCount(classid):
         return None
 
     return 0 if not lesson.likeList else len(lesson.likeList)
+
+def makeLessonDiscussion(fromUserName,toLesson,content):
+    discussion = Discussion(type=DiscussionType.LESSON.value,fromUserName=fromUserName,toUserName=toLesson,content=content)
+    now = datetime.now()
+    discussion.createTime = now
+    discussion.updateTime = now
+    discussion.save()
+
+def getLessonDiscussion(toLesson,start_index):
+    return [discussion for discussion in Discussion.objects(type=DiscussionType.LESSON.value,toUserName=toLesson)[start_index:]]

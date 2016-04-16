@@ -372,6 +372,28 @@ class LessonLikeResource(Resource):
         return lesson_like_result(success,msg=str(like_count_ret))
 
 
+@api_route('/discussion/lesson/<string:classid>')
+class LessonDiscussionResource(Resource):
+    parser = reqparse.RequestParser()
+
+    @add_args(parser,('fromUserName',str),('content',str))
+    def put(self,classid):
+        args = self.parser.parse_args()
+        fromUserName = args['fromUserName']
+        content = args['content']
+
+        makeLessonDiscussion(fromUserName,classid,content)
+        return base_result(success,msg='成功发表')
+
+    @add_args(parser,('after',int))
+    def get(self,classid):
+        args = self.parser.parse_args()
+        after_index = args['after']
+
+        discussionList = getLessonDiscussion(classid,int(after_index))
+        return lesson_discussion_result(success,discussions=discussionList)
+
+
 def auth_result(status_func,msg='',token='',identify=''):
     return status_func(msg,data={'token':token,'identify':identify})
 
@@ -431,6 +453,13 @@ def leavelist_result(status_func,msg='',error_code=error_code.success,leavelog=d
             leave.update(l.toDict())
             logs.append(leave)
     return status_func(msg,error_code=error_code,leavelog=logs)
+
+def lesson_discussion_result(status_func,msg='',error_code=error_code.success,discussions = list()):
+    discussionList = list()
+    for discussion in discussions:
+        discussionList.append(discussion.toDict())
+
+    return status_func(msg,error_code=error_code,discussionList=discussionList)
 
 sign_result = base_result
 leave_result = base_result
