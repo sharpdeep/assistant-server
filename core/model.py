@@ -261,7 +261,7 @@ class Discussion(Document):
     meta = {
         'indexes': [
             'toUserName',
-            ('type','toUserName','+createTime')
+            ('type','toUserName','createTime')
         ],
         'ordering': ['createTime']
     }
@@ -277,4 +277,31 @@ class Discussion(Document):
             'updateTime':datetime.strftime(self.updateTime,'%Y-%m-%d %H:%M:%S')
         }
 
+class Homework(Document):
+    fromUserName = StringField()
+    toUserName = StringField()
+    title = StringField()
+    content = StringField()
+    deadline = DateTimeField()
+    createTime = DateTimeField()
+    updateTime = DateTimeField()
 
+    meta = {
+        'indexes': [
+            'toUserName',
+            'deadline',
+            ('toUserName','createTime')
+        ],
+        'ordering': ['createTime']
+    }
+
+    def toDict(self):
+        return {
+            'fromUserName':self.fromUserName,
+            'toUserName':self.toUserName,
+            'title':self.title,
+            'content':self.content,
+            'deadline':datetime.strftime(self.deadline,'%Y-%m-%d'),
+            'createTime':datetime.strftime(self.createTime,'%Y-%m-%d %H:%M:%S'),
+            'updateTime':datetime.strftime(self.updateTime,'%Y-%m-%d %H:%M:%S')
+        }

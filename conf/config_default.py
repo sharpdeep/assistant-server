@@ -87,5 +87,9 @@ configs = {
         'like_lesson_repeat_error':150001,#课程点赞重复
         'like_lesson_failed_error':150002,#点赞失败
 
+        'identify_only_student_error': 160001,#只允许学生
+        'identify_only_teacher_error': 160002,#只允许教师
+
+        'identify_homework_deadline_error':170001,#作业截止日期出错
     }
 }

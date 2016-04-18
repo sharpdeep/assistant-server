@@ -93,6 +93,26 @@ def token_check(func):
             return func(*args,**kwargs)
     return wrapper
 
+#不进行token合法性检查
+def only_student(func):
+    @functools.wraps(func)
+    def wrapper(*args,**kwargs):
+        payload = util.parser_token(request.headers['Authorization'])
+        if payload.identify == Identify.TEACHER.value:
+            return base_result(failed,msg="该接口只允许学生访问",error_code=error_code.identify_only_student_error)
+        return func(*args,**kwargs)
+    return wrapper
+
+#不进行token合法性检查
+def only_teacher(func):
+    @functools.wraps(func)
+    def wrapper(*args,**kwargs):
+        payload = util.parser_token(request.headers['Authorization'])
+        if payload.identify == Identify.STUDENT.value:
+            return base_result(failed,msg="该接口只允许教师访问",error_code=error_code.identify_only_teacher_error)
+        return func(*args,**kwargs)
+    return wrapper
+
 @api_route('/auth')
 class AuthResource(Resource):
     parser = reqparse.RequestParser()
@@ -393,6 +413,32 @@ class LessonDiscussionResource(Resource):
         discussionList = getLessonDiscussion(classid,int(after_index))
         return lesson_discussion_result(success,discussions=discussionList)
 
+@api_route('/homework/<string:classid>')
+class HomeworkResource(Resource):
+    parser = reqparse.RequestParser()
+
+    @token_check
+    @only_teacher
+    @add_args(parser,('title',str),('content',str),('deadline',str))
+    def put(self,classid):
+        args = self.parser.parse_args()
+        title = args['title']
+        content = args['content']
+        deadline = args['deadline']
+        payload = util.parser_token(request.headers['Authorization'])
+        if not homeworkDeadlineCheck(deadline):
+            return base_result(failed,msg='截止日期出错',error_code=error_code.identify_homework_deadline_error)
+
+        makeHomework(payload.username,classid,title,content,deadline)
+        return base_result(success,msg='成功发布作业')
+
+    @add_args(parser,('after',int))
+    def get(self,classid):
+        args = self.parser.parse_args()
+        after_index = args['after']
+
+        return homework_result(success,homeworks=getHomework(classid,int(after_index)))
+
 
 def auth_result(status_func,msg='',token='',identify=''):
     return status_func(msg,data={'token':token,'identify':identify})
@@ -460,6 +506,13 @@ def lesson_discussion_result(status_func,msg='',error_code=error_code.success,di
         discussionList.append(discussion.toDict())
 
     return status_func(msg,error_code=error_code,discussionList=discussionList)
+
+def homework_result(status_func,msg='',error_code=error_code.success,homeworks = list()):
+    homeworkList = list()
+    for homework in homeworks:
+        homeworkList.append(homework.toDict())
+
+    return status_func(msg,error_code=error_code,homeworkList=homeworkList)
 
 sign_result = base_result
 leave_result = base_result

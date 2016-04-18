@@ -305,3 +305,20 @@ def makeLessonDiscussion(fromUserName,toLesson,content):
 
 def getLessonDiscussion(toLesson,start_index):
     return [discussion for discussion in Discussion.objects(type=DiscussionType.LESSON.value,toUserName=toLesson)[start_index:]]
+
+def makeHomework(teacherName,toLesson,title,content,deadline):
+    homework = Homework(fromUserName=teacherName,toUserName=toLesson,title=title,content=content)
+    homework.deadline = datetime.strptime(deadline,'%Y%m%d')
+    now = datetime.now()
+    homework.createTime = now
+    homework.updateTime = now
+    homework.save()
+
+def homeworkDeadlineCheck(deadline):
+    nowDate = datetime.now().date()
+    deadlineDate = datetime.strptime(deadline,'%Y%m%d').date()
+
+    return True if deadlineDate > nowDate else False
+
+def getHomework(toLesson,start_index):
+    return [homework for homework in Homework.objects(toUserName=toLesson)[start_index:]]
