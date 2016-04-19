@@ -66,16 +66,9 @@ def inClassRoom(classid,mac):
     return mac in room.roommac
 
 def deviceCheck(payload,deviceId):
-    identify = payload.identify
-    username = payload.username
-
-    if identify == Identify.STUDENT.value:
-        person = get_student(account=username)
-    else:
-        person = get_teacher(account=username)
-
-    if person and person.deviceid:
-        return person.deviceid == deviceId
+    devices = getDevicesByUsername(payload.username)
+    if devices:
+        return deviceId in [device.deviceId for device in devices]
     return None
 
 def isSignRepeat(username,classid):
