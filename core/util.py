@@ -244,17 +244,19 @@ def get_class_room_info(classId):
 
     #parser_content
     soup = BeautifulSoup(content,'html.parser')
-    tr = soup.find('tr',class_='DGItemStyle')
 
-    def find_td(index):
+    def find_td(tr,index):
         return tr.find_all('td')[index].text.strip()
 
-    class_room_info = dict()
-    class_room_info['roomid'] = find_td(0)
-    class_room_info['roomname'] = find_td(1)
-    class_room_info['roomtype'] = find_td(2)
+    roomInfos = list()
+    for tr in soup.find_all('tr')[1].find_all('tr')[1:]:
+        class_room_info = dict()
+        class_room_info['roomid'] = find_td(tr,0)
+        class_room_info['roomname'] = find_td(tr,1)
+        class_room_info['roomtype'] = find_td(tr,2)
+        roomInfos.append(class_room_info)
 
-    return success(classroom_info=class_room_info)
+    return success(classroom_info=roomInfos)
 
 def _get(url):
     try:
@@ -290,4 +292,4 @@ def chinese2int(numstr):
         return '0'
 
 if __name__ == '__main__':
-    print(get_class_room_info('58724'))
+    print(get_class_room_info('55683'))

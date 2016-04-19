@@ -30,21 +30,31 @@ def get_student(**kwargs):
 def get_teacher(**kwargs):
     return Teacher.objects(**kwargs).first()
 
-def get_or_create_classroom(classid,mac=["mac"]):
+def isClassroomExist(roomname):
+    return True if ClassRoom.objects(roomname=roomname) else False
+
+def get_or_create_classrooms(classid,mac=["mac"]):
     lesson = get_or_create_lesson(classid)
     if lesson is None:
         return None
-    roomname = lesson.classroom
-    room = ClassRoom.objects(roomname=roomname).first()
-    if not room:
-        ret_val = util.get_class_room_info(classid)
-        if not ret_val.status == Status.SUCCESS.value:
-            return None
-        info = ret_val.classroom_info
-        room = ClassRoom(roomid=info.roomid,roomname=info.roomname,roomtype=info.roomtype)
-        room.roommac = mac
-        room.save()
-    return room
+    rooms = list()
+    roomnames = lesson.classroom.split('/')
+    for roomname in roomnames:
+        if not isClassroomExist(roomname):
+            ret_val = util.get_class_room_info(classid)
+            if not ret_val.status == Status.SUCCESS.value:
+                return None
+            infos = ret_val.classroom_info
+            for info in infos:
+                if not isClassroomExist(info.roomname):
+                    room = ClassRoom(roomid=info.roomid,roomname=info.roomname,roomtype=info.roomtype)
+                    room.roommac = mac
+                    room.save()
+        else:
+            room = ClassRoom.objects(roomname=roomname).first()
+        rooms.append(room)
+    return rooms
+
 
 def getDevicesByUsername(username):
     return Device.objects(username=username)
@@ -60,10 +70,13 @@ def isLessonTime(classid):
     return lesson.is_lesson_time(datetime.now())
 
 def inClassRoom(classid,mac):
-    room = get_or_create_classroom(classid)
-    if room is None:
+    rooms = get_or_create_classrooms(classid)
+    if rooms is None:
         return None
-    return mac in room.roommac
+    for room in rooms:
+        if mac in room.roommac:
+            return True
+    return False
 
 def deviceCheck(payload,deviceId):
     devices = getDevicesByUsername(payload.username)
