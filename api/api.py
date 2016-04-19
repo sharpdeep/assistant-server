@@ -439,6 +439,30 @@ class HomeworkResource(Resource):
 
         return homework_result(success,homeworks=getHomework(classid,int(after_index)))
 
+@api_route('/device')
+class DeviceResource(Resource):
+    parser = reqparse.RequestParser()
+
+    @token_check
+    @only_student
+    def get(self):
+        payload = util.parser_token(request.headers['Authorization'])
+        return base_result(success,msg=getDeviceIds(payload.username))
+
+    @token_check
+    @only_student
+    @add_args(parser,('deviceid',str))
+    def put(self):
+        args = self.parser.parse_args()
+        deviceId = args['deviceid']
+        payload = util.parser_token(request.headers['Authorization'])
+
+
+        if isDeviceExist(deviceId):
+            return base_result(failed,msg='设备已经被绑定',error_code=error_code.device_bind_exist_error)
+        bindDevice(payload.username,deviceId)
+        return base_result(success,msg='绑定成功')
+
 
 def auth_result(status_func,msg='',token='',identify=''):
     return status_func(msg,data={'token':token,'identify':identify})

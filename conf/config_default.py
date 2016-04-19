@@ -91,5 +91,7 @@ configs = {
         'identify_only_teacher_error': 160002,#只允许教师
 
         'identify_homework_deadline_error':170001,#作业截止日期出错
+
+        'device_bind_exist_error':180001,#绑定设备时,设备已经被绑定
     }
 }

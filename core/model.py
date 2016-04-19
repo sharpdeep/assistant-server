@@ -305,3 +305,17 @@ class Homework(Document):
             'createTime':datetime.strftime(self.createTime,'%Y-%m-%d %H:%M:%S'),
             'updateTime':datetime.strftime(self.updateTime,'%Y-%m-%d %H:%M:%S')
         }
+
+#一个账号可以登陆多个设备，但是一个设备只能登陆一个账号
+#一个账号可以登陆多个设备，是为了换手机后仍能正常使用；
+#一个设备只能登陆一个账号，是为了防止代签到的情况发生
+class Device(Document):
+    username = StringField(required=True)
+    deviceId = StringField(required=True,unique=True)
+
+    meta = {
+        'indexes':[
+            'username',
+            'deviceId'
+        ]
+    }

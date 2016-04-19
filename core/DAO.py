@@ -46,6 +46,12 @@ def get_or_create_classroom(classid,mac=["mac"]):
         room.save()
     return room
 
+def getDevicesByUsername(username):
+    return Device.objects(username=username)
+
+def getDeviceById(deviceId):
+    return Device.objects(deviceId=deviceId)
+
 def isLessonTime(classid):
     lesson = get_or_create_lesson(classid)
     if not lesson:
@@ -68,7 +74,7 @@ def deviceCheck(payload,deviceId):
     else:
         person = get_teacher(account=username)
 
-    if person:
+    if person and person.deviceid:
         return person.deviceid == deviceId
     return None
 
@@ -322,3 +328,16 @@ def homeworkDeadlineCheck(deadline):
 
 def getHomework(toLesson,start_index):
     return [homework for homework in Homework.objects(toUserName=toLesson)[start_index:]]
+
+def getDeviceIds(username):
+    devices = getDevicesByUsername(username)
+    if devices:
+        return '/'.join([device.deviceId for device in devices])
+    return ''
+
+def isDeviceExist(deviceId):
+    return True if getDeviceById(deviceId) else False
+
+def bindDevice(username,deviceId):
+    device = Device(username=username,deviceId=deviceId)
+    device.save()
