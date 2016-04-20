@@ -58,8 +58,8 @@ def get_or_create_classrooms(classid,mac=["mac"]):
                 return None
             infos = ret_val.classroom_info
             for info in infos:
-                if not isClassroomExist(info.roomname):
-                    room = ClassRoom(roomid=info.roomid,roomname=info.roomname,roomtype=info.roomtype)
+                if not isClassroomExist(info['roomname']):
+                    room = ClassRoom(roomid=info['roomid'],roomname=info['roomname'],roomtype=info['roomtype'])
                     room.roommac = mac
                     room.save()
         else:
