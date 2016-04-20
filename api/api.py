@@ -337,7 +337,7 @@ class LeaveResource(Resource):
 
     @token_check
     @add_args(parser,('leave_date',str),('leave_type',int),('leave_reason',str),('classid',str))
-    def post(self):
+    def put(self):
         payload = util.parser_token(request.headers['Authorization'])
         if payload.identify == Identify.TEACHER.value:
             return leave_result(failed,msg='教师不用请假',error_code=error_code.leave_identify_error)

@@ -34,10 +34,12 @@ class DiscussionType(Enum):
 
 #请假
 class Leave(EmbeddedDocument):
+    leaveid = StringField() #id为: studentid+classid+leave_date
     studentid = StringField()
     studentname = StringField()
     classid = StringField()
     classname = StringField()
+    verify = BooleanField(default=False)
     leave_type = IntField(default=LeaveType.OTHER.value)
     leave_reason = StringField(default='')
     leave_date = DateTimeField()
@@ -49,6 +51,7 @@ class Leave(EmbeddedDocument):
             'studentname':self.studentname,
             'classid':self.classid,
             'classname':self.classname,
+            'verfiy':self.verify,
             'leave_type':self.leave_type,
             'leave_date':datetime.strftime(self.leave_date,'%Y%m%d'),
             'leave_reason':self.leave_reason
