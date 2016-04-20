@@ -33,8 +33,8 @@ class DiscussionType(Enum):
     WHOLE = 1
 
 #请假
-class Leave(EmbeddedDocument):
-    leaveid = StringField() #id为: studentid+classid+leave_date
+class Leave(Document):
+    leaveid = StringField(unique=True) #id为: studentid+classid+leave_date
     studentid = StringField()
     studentname = StringField()
     classid = StringField()
@@ -44,6 +44,11 @@ class Leave(EmbeddedDocument):
     leave_reason = StringField(default='')
     leave_date = DateTimeField()
 
+    meta = {
+        'indexes':[
+            'leaveid',
+        ],
+    }
 
     def toDict(self):
         return {
@@ -71,7 +76,7 @@ class Lesson(Document):
     schedule = DictField()
     studentList = ListField()
     signlog = MapField(ListField())
-    leavelog = MapField(ListField(EmbeddedDocumentField(Leave)))
+    # leavelog = MapField(ListField(EmbeddedDocumentField(Leave)))
     likeList = ListField(default=list())
 
     def __str__(self):
@@ -211,7 +216,7 @@ class Student(Document):
     token = StringField()
     syllabus = MapField(EmbeddedDocumentField(Syllabus)) #key为学年+学期，value为读音课表
     signlog = MapField(ListField())
-    leavelog = MapField(ListField(EmbeddedDocumentField(Leave)))
+    # leavelog = MapField(ListField(EmbeddedDocumentField(Leave)))
 
     def save_from_dict(self,info):
         self.name = info['name']

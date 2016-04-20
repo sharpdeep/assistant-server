@@ -15,6 +15,9 @@ def isTeacher(payload):
 def isStudent(payload):
     return payload.identify == Identify.STUDENT.value
 
+def mkLeaveId(username,classid,date=datetime.now()):
+    return username+classid+date.strftime("%Y%m%d")
+
 def get_or_create_lesson(classid):
     lesson = Lesson.objects(lesson_id=classid).first()
     if not lesson:
@@ -29,6 +32,9 @@ def get_student(**kwargs):
 
 def get_teacher(**kwargs):
     return Teacher.objects(**kwargs).first()
+
+def getLeave(leaveid):
+    return Leave.objects(leaveid=leaveid).first()
 
 def isClassroomExist(roomname):
     return True if ClassRoom.objects(roomname=roomname) else False
@@ -96,13 +102,8 @@ def isSignRepeat(username,classid):
 
 def isAskLeaveBeforeSign(username,classid):
     #签到时检查是否有请假
-    student = get_student(account=username)
-    if student is None:
-        return None
-    leave_list = student.leavelog.get(datetime.now().strftime('%Y%m%d'))
-    if leave_list:
-        return True if classid in [leave.classid for leave in leave_list if leave.verify] else False
-    return False
+    leaveid = mkLeaveId(username,classid)
+    return True if getLeave(leaveid) else False
 
 def sign(username,classid):
     lesson = get_or_create_lesson(classid)
@@ -126,46 +127,26 @@ def sign(username,classid):
 
     return True
 
-def isAskLeaveRepeat(leave):
-    lesson = get_or_create_lesson(leave.classid)
+def isAskLeaveRepeat(leaveid):
+    return True if getLeave(leaveid) else False
+
+def leaveTimeCheck(classid,leave_date):
+    lesson = get_or_create_lesson(classid)
     if lesson is None:
         return None
-    leave_list = lesson.leavelog.get(leave.leave_date.strftime('%Y%m%d'))
-    if leave_list and leave.studentid in [l.studentid for l in leave_list]:
-        return True
-    return False
+    return lesson.is_leave_time_avaliable(datetime.now(),leave_date)
 
-def leaveTimeCheck(leave):
-    lesson = get_or_create_lesson(leave.classid)
-    if lesson is None:
-        return None
-
-    return lesson.is_leave_time_avaliable(datetime.now(),leave.leave_date)
-
-def askLeave(leave):
-    lesson = get_or_create_lesson(leave.classid)
-    student = get_student(account=leave.studentid)
-    if lesson is None or student is None:
-        return None
-
+def askLeave(leaveid,username,classid,leave_type,leave_reason,leave_date):
+    student = get_student(account=username)
+    lesson = get_or_create_lesson(classid)
+    if not student or not lesson:
+        return  None
+    leave = Leave(leaveid=leaveid,studentid=username,classid=classid,leave_type=leave_type,leave_reason=leave_reason,leave_date=leave_date)
     leave.studentname = student.name
     leave.classname = lesson.name
-
-    lesson_leave_list = lesson.leavelog.get(leave.leave_date.strftime('%Y%m%d'))
-    if not lesson_leave_list:
-        lesson_leave_list = list()
-    lesson_leave_list.append(leave)
-    lesson.leavelog[leave.leave_date.strftime('%Y%m%d')] = lesson_leave_list
-    lesson.save()
-
-    student_leave_list = student.leavelog.get(leave.leave_date.strftime('%Y%m%d'))
-    if not student_leave_list:
-        student_leave_list = list()
-    student_leave_list.append(leave)
-    student.leavelog[leave.leave_date.strftime('%Y%m%d')] = student_leave_list
-    student.save()
-    #todo 发送邮件给老师，更新老师的model
+    leave.save()
     return True
+
 
 def getLessonSignLog(classid,dateStr):
 	lesson = get_or_create_lesson(classid)

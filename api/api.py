@@ -237,6 +237,7 @@ class SignResource(Resource):
     parser = reqparse.RequestParser()
 
     @token_check
+    @only_student
     @add_args(parser,('classid',str),('device_id',str),('mac',str))
     def post(self):
         args = self.parser.parse_args()
@@ -244,13 +245,7 @@ class SignResource(Resource):
         mac = args['mac']
         classid = args['classid']
         payload = util.parser_token(request.headers['Authorization'])
-        if payload.identify == Identify.TEACHER.value:
-            return sign_result(failed,msg='老师不用签到',error_code=error_code.sign_identify_error)
 
-        # leave_check_val = isAskLeaveBeforeSign(payload.username,classid)
-        # if leave_check_val:
-        #     return sign_result(error,msg='已经请假过了，不必签到',error_code=error_code.sign_leave_before_error)
-        # elif isinstance(leave_check_val,bool):
         device_check_val = deviceCheck(payload,device_id)
         if device_check_val: #是本人
             time_check_val = isLessonTime(classid)
@@ -336,12 +331,10 @@ class LeaveResource(Resource):
     parser = reqparse.RequestParser()
 
     @token_check
+    @only_student
     @add_args(parser,('leave_date',str),('leave_type',int),('leave_reason',str),('classid',str))
     def put(self):
         payload = util.parser_token(request.headers['Authorization'])
-        if payload.identify == Identify.TEACHER.value:
-            return leave_result(failed,msg='教师不用请假',error_code=error_code.leave_identify_error)
-
         username = payload.username
 
         args = self.parser.parse_args()
@@ -349,18 +342,15 @@ class LeaveResource(Resource):
         leave_type = args['leave_type']
         leave_reason = args['leave_reason']
         classid = args['classid']
+        leaveid = mkLeaveId(username,classid,leave_date)
 
-        print(classid,leave_type,leave_date,leave_reason)
-
-        leave = Leave(studentid=username,classid=classid,leave_type=leave_type,leave_reason=leave_reason,leave_date=leave_date)
-
-        time_check_val = leaveTimeCheck(leave)
+        time_check_val = leaveTimeCheck(classid,leave_date)
         if time_check_val:
-            repeat_check_val = isAskLeaveRepeat(leave)
+            repeat_check_val = isAskLeaveRepeat(leaveid)
             if repeat_check_val:
                 return leave_result(failed,msg='重复请假',error_code=error_code.leave_repeat_error)
             elif isinstance(repeat_check_val,bool):
-                if askLeave(leave):
+                if askLeave(leaveid,username,classid,leave_type,leave_reason,leave_date):
                     return leave_result(success,msg='请假成功,等待老师同意')
         elif isinstance(time_check_val,bool):
             return leave_result(failed,msg='时间有问题',error_code=error_code.leave_time_error)
