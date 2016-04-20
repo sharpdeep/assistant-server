@@ -36,6 +36,12 @@ def get_teacher(**kwargs):
 def getLeave(leaveid):
     return Leave.objects(leaveid=leaveid).first()
 
+def getLeavesByStudentid(studentid):
+    return Leave.objects(studentid=studentid)
+
+def getLeavesByClassid(classid):
+    return  Leave.objects(classid=classid)
+
 def isClassroomExist(roomname):
     return True if ClassRoom.objects(roomname=roomname) else False
 
@@ -185,40 +191,20 @@ def getStudentSignLogCount(username,dateStr):
 	return count
 
 def getLessonLeaveLog(classid,dateStr):
-	lesson = get_or_create_lesson(classid)
-	if lesson is None:
-		return None
-	if dateStr == 'all':
-		return lesson.leavelog
-	leaveList = lesson.leavelog.get(dateStr)
-	return {dateStr:leaveList} if leaveList else None
+    leaves = getLeavesByClassid(classid)
+    return [leave.toDict() for leave in leaves] if dateStr == 'all' else [leave.toDict() for leave in leaves if dateStr == leave.leave_date.strftime('%Y%m%d')]
 
 def getLessonLeaveLogCount(classid,dateStr):
-	leavelog = getLessonLeaveLog(classid,dateStr)
-	if leavelog is None or not isinstance(leavelog,dict):
-		return 0
-	count = 0
-	for v in leavelog.values():
-		count += len(v)
-	return count
+    leaveList = getLessonLeaveLog(classid,dateStr)
+    return 0 if not leaveList else len(leaveList)
 
 def getStudentLeaveLog(username,dateStr):
-	student = get_student(account=username)
-	if student is None:
-		return None
-	if dateStr == 'all':
-		return student.leavelog
-	leaveList = student.leavelog.get(dateStr)
-	return {dateStr:leaveList} if leaveList else None
+    leaves = getLeavesByStudentid(username)
+    return [leave.toDict() for leave in leaves] if dateStr == 'all' else [leave.toDict() for leave in leaves if dateStr == leave.leave_date.strftime('%Y%m%d')]
 
 def getStudentLeaveLogCount(username,dateStr):
-	leavelog = getStudentLeaveLog(username,dateStr)
-	if leavelog is None or not isinstance(leavelog,dict):
-		return 0
-	count = 0
-	for v in leavelog.values():
-		count += len(v)
-	return count
+    leaveList = getStudentLeaveLog(username,dateStr)
+    return 0 if not leaveList else len(leaveList)
 
 def getUserSyllabus(user,start_year,semester):
     syllabus = user.syllabus.get(start_year+'0'+str(semester))

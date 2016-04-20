@@ -47,7 +47,10 @@ class Leave(Document):
     meta = {
         'indexes':[
             'leaveid',
+            'studentid',
+            'classid',
         ],
+        'ordering':['leave_date']
     }
 
     def toDict(self):

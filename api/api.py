@@ -505,14 +505,8 @@ def signlist_result(status_func,msg='',error_code=configs.error_code.success,sig
             logs.append(sign)
     return status_func(msg,error_code=error_code,signlog=logs)
 
-def leavelist_result(status_func,msg='',error_code=error_code.success,leavelog=dict()):
-    logs = list()
-    for date,leavelist in leavelog.items():
-        leave = {'date':date}
-        for l in leavelist:
-            leave.update(l.toDict())
-            logs.append(leave)
-    return status_func(msg,error_code=error_code,leavelog=logs)
+def leavelist_result(status_func,msg='',error_code=error_code.success,leavelog=list()):
+    return status_func(msg,error_code=error_code,leavelog=leavelog)
 
 def lesson_discussion_result(status_func,msg='',error_code=error_code.success,discussions = list()):
     discussionList = list()
