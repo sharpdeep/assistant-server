@@ -356,6 +356,18 @@ class LeaveResource(Resource):
             return leave_result(failed,msg='时间有问题',error_code=error_code.leave_time_error)
         return leave_result(failed,msg='未知错误',error_code=error_code.unknow_error)
 
+    @token_check
+    @only_teacher
+    @add_args(parser,('leaveid',str),('verify',int)) #0->不同意,1->同意
+    def post(self):
+        args = self.parser.parse_args()
+        leaveid = args['leaveid']
+        verify = bool(args['verify'])
+        ret_val = verifyLeave(leaveid,verify)
+        if ret_val:
+            return base_result(success,msg='成功修改请假状态')
+        return base_result(error,msg='未知错误',error_code=error_code.unknow_error)
+
 @api_route('/like/lesson/<string:classid>')
 class LessonLikeResource(Resource):
     parser = reqparse.RequestParser()

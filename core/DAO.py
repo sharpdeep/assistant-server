@@ -153,6 +153,13 @@ def askLeave(leaveid,username,classid,leave_type,leave_reason,leave_date):
     leave.save()
     return True
 
+def verifyLeave(leaveid,verify):
+    leave = getLeave(leaveid)
+    if not leave:
+        return None
+    leave.verify = verify
+    leave.save()
+    return True
 
 def getLessonSignLog(classid,dateStr):
 	lesson = get_or_create_lesson(classid)
