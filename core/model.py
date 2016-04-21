@@ -59,7 +59,7 @@ class Leave(Document):
             'studentname':self.studentname,
             'classid':self.classid,
             'classname':self.classname,
-            'verfiy':self.verify,
+            'verify':self.verify,
             'leave_type':self.leave_type,
             'leave_date':datetime.strftime(self.leave_date,'%Y%m%d'),
             'leave_reason':self.leave_reason
@@ -81,6 +81,7 @@ class Lesson(Document):
     signlog = MapField(ListField())
     # leavelog = MapField(ListField(EmbeddedDocumentField(Leave)))
     likeList = ListField(default=list())
+    teacherRef = ListField(default=list())
 
     def __str__(self):
         lesson_info = '班号:\t'+self.lesson_id+'\t\n'+\

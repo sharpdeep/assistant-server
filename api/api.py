@@ -198,7 +198,7 @@ class SyllabusResource(Resource):
         else:
             person = get_teacher(account=payload.username)
 
-        ret = addLesson(person,start_year,semester,classid)
+        ret = addLesson(person,payload.username,start_year,semester,classid)
 
         if ret:
             syllabus = getUserSyllabus(person,start_year,semester)
@@ -362,7 +362,7 @@ class LeaveResource(Resource):
     def post(self):
         args = self.parser.parse_args()
         leaveid = args['leaveid']
-        verify = bool(args['verify'])
+        verify = bool(int(args['verify']))
         ret_val = verifyLeave(leaveid,verify)
         if ret_val:
             return base_result(success,msg='成功修改请假状态')

@@ -230,7 +230,7 @@ def isSyllabusConflict(lesson,lessons):
                     return True
     return False
 
-def addLesson(user,start_year,semester,classid):
+def addLesson(user,username,start_year,semester,classid):
     lesson = get_or_create_lesson(classid)
     syllabus = getUserSyllabus(user,start_year,semester)
     if lesson is None:
@@ -246,7 +246,15 @@ def addLesson(user,start_year,semester,classid):
         print("课程时间有冲突")
         return False
 
+    if not lesson.teacherRef:
+        lesson.teacherRef = [username]
+        lesson.save()
+    elif not username in lesson.teacherRef:
+        lesson.teacherRef.append(username)
+        lesson.save()
+
     user.syllabus[start_year+'0'+str(semester)]['lessons'].append(lesson)
+
     user.save()
     return True
 
