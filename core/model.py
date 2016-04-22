@@ -44,6 +44,20 @@ class Leave(Document):
     leave_reason = StringField(default='')
     leave_date = DateTimeField()
 
+    def leaveTypeName(self):
+        if self.leave_type == LeaveType.OTHER.value:
+            return '其他'
+        elif self.leave_type == LeaveType.SICK.value:
+            return '病假'
+        elif self.leave_type == LeaveType.AFFAIR.value:
+            return '事假'
+
+    def leaveDate(self):
+        dateStr = datetime.strftime(self.leave_date,'%Y年%m月%d日 ')
+        dateStr += util.getWeekStr(self.leave_date.weekday())
+        return dateStr
+
+
     meta = {
         'indexes':[
             'leaveid',
@@ -192,6 +206,7 @@ class Teacher(Document):
     deviceid = StringField()
     token = StringField()
     name = StringField()
+    email = StringField()
     syllabus = MapField(EmbeddedDocumentField(Syllabus))
 
 class Student(Document):

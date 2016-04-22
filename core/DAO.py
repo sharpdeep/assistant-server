@@ -151,6 +151,14 @@ def askLeave(leaveid,username,classid,leave_type,leave_reason,leave_date):
     leave.studentname = student.name
     leave.classname = lesson.name
     leave.save()
+    teachers = list()
+    for ref in lesson.teacherRef:
+        teacher = get_teacher(account=ref)
+        if not teacher:
+            return None
+        teachers.append(teacher)
+    if not len(teachers) == 0:
+        util.sendLeaveMail(leave,teachers)
     return True
 
 def verifyLeave(leaveid,verify):

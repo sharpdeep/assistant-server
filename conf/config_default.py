@@ -38,6 +38,13 @@ configs = {
         'name':'assistant',
     },
 
+    'email':{
+        'url':'http://api.sendcloud.net/apiv2/mail/sendtemplate',
+        'apiUser':'',
+        'apiKey':'',
+        'templateInvokeName':'leave_mail_send',
+    },
+
     #上课时间对照表
     'lesson_time':{
         'duration':50, #上课时间50分钟

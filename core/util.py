@@ -6,6 +6,8 @@
 @file:util.py
 @time: 2016-01-02 00:19
 """
+import json
+import requests
 from conf.config import configs
 from core.status import *
 from datetime import datetime
@@ -29,7 +31,6 @@ curriculum_base_url = b'http://credit.stu.edu.cn/Student/StudentTimeTable.aspx?'
 student_info_url = 'http://credit.stu.edu.cn/Student/DisplayStudentInfo.aspx'
 class_detail_msg_base_url = 'http://credit.stu.edu.cn/Info/DisplayKkb.aspx?'
 class_room_info_base_url = 'http://credit.stu.edu.cn/CoursePlan/viewclassroom.aspx?ClassID='
-
 
 @unique
 class Semester(Enum):
@@ -258,6 +259,44 @@ def get_class_room_info(classId):
 
     return success(classroom_info=roomInfos)
 
+def genXsmtpapiTemplate():
+    return {
+        'to': [],
+        'sub': {
+            '%studentName%': [],
+            '%lessonName%': [],
+            '%lesson%': [],
+            '%type%' : [],
+            '%name%' : [],
+            '%time%' : [],
+            '%reason%' : []
+    }
+    }
+
+def sendLeaveMail(leave,teachers):
+    xsmtpapi = genXsmtpapiTemplate()
+    for teacher in teachers:
+        xsmtpapi['to'].append(teacher.email)
+        xsmtpapi['sub']['%studentName%'].append(leave.studentname)
+        xsmtpapi['sub']['%lessonName%'].append(leave.classname)
+        xsmtpapi['sub']['%lesson%'].append('['+leave.classid+']'+leave.classname)
+        xsmtpapi['sub']['%type%'].append(leave.leaveTypeName())
+        xsmtpapi['sub']['%name%'].append('['+leave.studentid+']'+leave.studentname)
+        xsmtpapi['sub']['%time%'].append(leave.leaveDate())
+        xsmtpapi['sub']['%reason%'].append(leave.leave_reason)
+
+    params = {
+        "apiUser": configs.email.apiUser, # 使用apiUser和apiKey进行验证
+        "apiKey" : configs.email.apiKey,
+        "templateInvokeName" : configs.email.templateInvokeName,
+        "xsmtpapi" : json.dumps(xsmtpapi),
+        "from" : leave.studentid+"@stu.edu.cn", # 发信人, 用正确邮件地址替代
+        "fromName" : leave.studentname,
+    }
+
+    r = requests.post(configs.email.url,data=params)
+    print(r.text)
+
 def _get(url):
     try:
         resp = request.urlopen(url,timeout=default_timeout)
@@ -291,5 +330,25 @@ def chinese2int(numstr):
     elif numstr == '日':
         return '0'
 
+def getWeekStr(weekday):
+    prefix = '周'
+    if weekday == 0:
+        return prefix+'一'
+    elif weekday == 1:
+        return  prefix + '二'
+    elif weekday == 2:
+        return prefix + '三'
+    elif weekday == 3:
+        return prefix + '四'
+    elif weekday == 4:
+        return prefix + '五'
+    elif weekday == 5:
+        return prefix + '六'
+    elif weekday == 6:
+        return prefix + '日'
+
 if __name__ == '__main__':
-    print(get_class_room_info('55683'))
+    from core.model import *
+    leave = Leave.objects(leaveid='12rscai0000020160426').first()
+    teacher = Teacher.objects(account='teacher').first()
+    sendLeaveMail(leave,[teacher])
